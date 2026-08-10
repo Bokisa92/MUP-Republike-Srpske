@@ -505,7 +505,7 @@
   let currentUserProfile = null;
   let stats = { total: 0, fines: 0, warrants: 0 };
 
-  // --- PERSISTENCIJA I LOGIKA PROVERE ODOBRENJA ---
+  // --- PERSISTENCIJA I PROVERA ODOBRENJA ---
   onAuthStateChanged(auth, async (user) => {
     if (user) {
       const userDoc = await getDoc(doc(db, "users", user.uid));
@@ -516,7 +516,6 @@
           document.getElementById('whoName').textContent = data.name || user.email;
           document.getElementById('gate').style.display = 'none';
 
-          // Provera da li je Admin
           if (data.role === 'admin') {
             document.getElementById('adminBtn').style.display = 'inline-block';
             listenForPendingRequests();
@@ -537,25 +536,34 @@
     }
   });
 
-  // --- FIREBASE RANG LISTA ---
+  // --- TRAJNA RANG LISTA (FIREBASE REALTIME) ---
   onSnapshot(collection(db, "leaderboard"), (snapshot) => {
     let list = [];
-    snapshot.forEach((doc) => list.push(doc.data()));
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      if (data.name && data.count !== undefined) {
+        list.push(data);
+      }
+    });
+
     list.sort((a, b) => b.count - a.count);
+
     const el = document.getElementById('leaderboardList');
     if(list.length === 0){
       el.innerHTML = '<div class="lb-empty">Nema još evidentiranih kazni.</div>';
       return;
     }
-    el.innerHTML = list.map((e,i)=>`
+
+    el.innerHTML = list.map((e, i) => `
       <div class="lb-row">
-        <div class="lb-rank">${i+1}.</div>
+        <div class="lb-rank">${i + 1}.</div>
         <div class="lb-name">${e.name}</div>
         <div class="lb-count">${e.count}</div>
-      </div>`).join('');
+      </div>
+    `).join('');
   });
 
-  // --- PRIJAVA / REGISTRACIJA ---
+  // --- LOGIKA PRIJAVE I REGISTRACIJE ---
   window.switchGate = function(mode){
     document.getElementById('gateBtnLogin').classList.toggle('active', mode==='login');
     document.getElementById('gateBtnSignup').classList.toggle('active', mode==='signup');
@@ -569,7 +577,7 @@
     const pass = document.getElementById('loginPass').value.trim();
     const statusEl = document.getElementById('loginStatus');
     statusEl.style.color = 'var(--muted)';
-    statusEl.textContent = 'Provera podataka...';
+    statusEl.textContent = 'Provjera podataka...';
 
     signInWithEmailAndPassword(auth, email, pass).catch((err) => {
       statusEl.style.color = 'var(--danger)';
@@ -595,11 +603,10 @@
         name: name,
         email: email,
         rank: rank,
-        approved: false, // Čeka odobrenje admina
+        approved: false,
         role: "user"
       });
 
-      // Slanje i u Discord čisto radi obaveštenja
       fetch(WEBHOOKS.signup, {
         method:'POST',
         headers:{'Content-Type':'application/json'},
@@ -671,7 +678,7 @@
       .forEach(id=>{ const el=document.getElementById(id); if(el && !el.value) el.value = name; });
   }
 
-  // --- TABOVI I OBRASCI ---
+  // --- NAVIGACIJA TABOVA ---
   window.openTab = function(evt, tab){
     document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
@@ -680,7 +687,7 @@
     evt.currentTarget.classList.add('active');
   };
 
-  // --- SLANJE OBRASCA U DISCORD I BAZU ---
+  // --- SLANJE U DISCORD I FIREBASE UPIS ---
   window.sendDiscord = async function(e, type){
     e.preventDefault();
     const statusEl = document.getElementById('status');
@@ -688,7 +695,6 @@
     statusEl.textContent = 'Slanje zapisnika u sistem...';
 
     let embedData = { title: "", fields: [], color: 3991160 };
-    let officerName = currentUserProfile ? currentUserProfile.name : "Nepoznato";
 
     if(type === 'shifts'){
       embedData.title = "📢 EVIDENCIJA SMJENE";
@@ -698,7 +704,7 @@
         { name: "Napomena:", value: document.getElementById('sh_note').value || "Nema", inline: false }
       ];
     } else if(type === 'punishment'){
-      officerName = document.getElementById('p_officer').value;
+      const officerName = document.getElementById('p_officer').value.trim();
       embedData.title = "📜 IZDATA PREKRŠAJNA KAZNA";
       embedData.color = 11102287;
       embedData.fields = [
@@ -708,9 +714,16 @@
         { name: "Iznos kazne:", value: document.getElementById('p_price').value + " KM", inline: true }
       ];
 
-      // Ažuriranje rang liste u Firestore-u
-      const lbRef = doc(db, "leaderboard", officerName.replace(/\s+/g, '_').toLowerCase());
-      await setDoc(lbRef, { name: officerName, count: increment(1) }, { merge: true });
+      // TRAJNI UPIS U FIREBASE RANG LISTU POMOĆU INCREMENT
+      if (officerName) {
+        const docId = officerName.toLowerCase().replace(/\s+/g, '_');
+        const lbRef = doc(db, "leaderboard", docId);
+        await setDoc(lbRef, { 
+          name: officerName, 
+          count: increment(1) 
+        }, { merge: true });
+      }
+
       stats.fines++;
       document.getElementById('statFines').textContent = stats.fines;
     } else if(type === 'arrest_warrants'){
@@ -758,7 +771,7 @@
       embedData.fields = [
         { name: "Službenik:", value: document.getElementById('vh_officer').value, inline: true },
         { name: "Vlasnik:", value: document.getElementById('vh_target').value, inline: true },
-        { name: "Model vozilа:", value: document.getElementById('vh_model').value, inline: true },
+        { name: "Model vozila:", value: document.getElementById('vh_model').value, inline: true },
         { name: "Tablice:", value: document.getElementById('vh_plates').value, inline: true }
       ];
     } else if(type === 'wanted'){
