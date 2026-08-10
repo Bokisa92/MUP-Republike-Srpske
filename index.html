@@ -9,7 +9,10 @@
         .container { background-color: #1e3e62; padding: 20px; border-radius: 12px; max-width: 650px; margin: auto; box-shadow: 0 5px 20px rgba(0,0,0,0.5); border-top: 6px solid #0056b3; }
         h2 { text-align: center; margin-top: 0; text-transform: uppercase; letter-spacing: 1px; color: #ffffff; }
         p.subtitle { text-align: center; font-size: 13px; color: #b0c4de; margin-bottom: 20px; }
-        
+
+        .warning-banner { background-color: #5c1f1f; border: 1px solid #ff4d4d; color: #ffdada; padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; display: none; }
+        .warning-banner.show { display: block; }
+
         /* Meni sa dugmićima */
         .nav-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px; justify-content: center; }
         .tab-btn { background-color: #000000; border: 1px solid #0056b3; color: #ffffff; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 12px; transition: 0.2s; }
@@ -23,8 +26,9 @@
         input, select, textarea { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #0056b3; background-color: #000000; color: #ffffff; box-sizing: border-box; font-size: 14px; }
         button.submit-btn { width: 100%; padding: 12px; background-color: #0056b3; border: none; border-radius: 6px; color: white; font-size: 15px; font-weight: bold; cursor: pointer; margin-top: 10px; }
         button.submit-btn:hover { background-color: #0088ff; }
-        
-        #status { margin-top: 15px; text-align: center; font-weight: bold; }
+        button.submit-btn:disabled { background-color: #444444; cursor: not-allowed; }
+
+        #status { margin-top: 15px; text-align: center; font-weight: bold; white-space: pre-wrap; }
     </style>
 </head>
 <body>
@@ -32,6 +36,12 @@
 <div class="container">
     <h2>MUP REPUBLIKE SRPSKE</h2>
     <p class="subtitle">Centralni Informacioni Sistem</p>
+
+    <div id="fileWarning" class="warning-banner">
+        ⚠️ Otvorio si ovaj fajl direktno preko <b>file://</b> putanje. Neki browseri (npr. Chrome) zbog toga blokiraju slanje ka Discordu.
+        Rešenje: postavi fajl na hosting (GitHub Pages, Netlify) ili ga pokreni lokalno preko servera, npr:
+        <code>python -m http.server</code> pa otvori <code>http://localhost:8000/mup_rs_portal.html</code>.
+    </div>
 
     <!-- Meni za izbor forme -->
     <div class="nav-tabs">
@@ -176,112 +186,146 @@
         incident: "https://discord.com/api/webhooks/1536329611154300980/TDgTbyCiN38rKQhPY2MAiJ3fJIn0O4y_spouIiKOKf59ya6yqosDAFQbdHzoAxXClnp9"
     };
 
+    // Upozori korisnika ako je fajl otvoren direktno (file://), jer tada browser
+    // često blokira fetch pozive ka Discordu (opaque/null origin -> failed to fetch).
+    document.addEventListener('DOMContentLoaded', () => {
+        if (window.location.protocol === 'file:') {
+            document.getElementById('fileWarning').classList.add('show');
+        }
+    });
+
     function openTab(evt, tab) {
         let contents = document.getElementsByClassName("tab-content");
-        for (let i = 0; i < contents.length; i++) { 
-            contents[i].classList.remove("active"); 
+        for (let i = 0; i < contents.length; i++) {
+            contents[i].classList.remove("active");
         }
         let btns = document.getElementsByClassName("tab-btn");
-        for (let i = 0; i < btns.length; i++) { 
-            btns[i].classList.remove("active"); 
+        for (let i = 0; i < btns.length; i++) {
+            btns[i].classList.remove("active");
         }
 
         let formId = "form" + tab.charAt(0).toUpperCase() + tab.slice(1);
         let targetForm = document.getElementById(formId);
-        
-        if(!targetForm) {
+
+        if (!targetForm) {
             targetForm = document.getElementById("form" + tab);
         }
 
-        if(targetForm) {
+        if (targetForm) {
             targetForm.classList.add("active");
         }
 
-        if(evt && evt.currentTarget) {
+        if (evt && evt.currentTarget) {
             evt.currentTarget.classList.add("active");
         }
         document.getElementById("status").innerText = "";
     }
 
+    // Uzmi vrednost polja i osiguraj da nikad ne pošaljemo prazan string
+    // (Discord embed API odbija fieldove sa praznom "value" vrednošću -> 400 Bad Request).
+    function val(id, fallback) {
+        const el = document.getElementById(id);
+        const v = el ? el.value.trim() : "";
+        return v.length ? v : (fallback !== undefined ? fallback : "N/A");
+    }
+
+    function buildPayload(type) {
+        if (type === 'shifts') {
+            return { embeds: [{ title: "📅 EVIDENCIJA SMJENE", color: 3447003, fields: [
+                { name: "Policajac:", value: val('sh_officer'), inline: true },
+                { name: "Status:", value: val('sh_type'), inline: true },
+                { name: "Napomena:", value: val('sh_note', "Nema"), inline: false }
+            ]}]};
+        } else if (type === 'arrest_warrants') {
+            return { embeds: [{ title: "📋 NALOG ZA HAPŠENJE", color: 15158332, fields: [
+                { name: "Nalog izdao:", value: val('aw_officer'), inline: true },
+                { name: "Osumnjičeni:", value: val('aw_target'), inline: true },
+                { name: "Krivično djelo:", value: val('aw_crime'), inline: false }
+            ]}]};
+        } else if (type === 'arrest_logs') {
+            return { embeds: [{ title: "📄 ZAPISNIK O HAPŠENJU", color: 10038562, fields: [
+                { name: "Policajac:", value: val('al_officer'), inline: true },
+                { name: "Uhapšeni:", value: val('al_target'), inline: true },
+                { name: "Kazna (minuta):", value: val('al_time') + " min", inline: true },
+                { name: "Razlog / Predmeti:", value: val('al_reason'), inline: false }
+            ]}]};
+        } else if (type === 'punishment') {
+            return { embeds: [{ title: "📨 PREKRŠAJNI NALOG", color: 15158332, fields: [
+                { name: "Službeno lice:", value: val('p_officer'), inline: true },
+                { name: "Počinilac:", value: val('p_target'), inline: true },
+                { name: "Prekršaj:", value: val('p_type'), inline: false },
+                { name: "Iznos:", value: val('p_price') + " KM", inline: true }
+            ]}]};
+        } else if (type === 'id') {
+            return { embeds: [{ title: "🪪 IZDATA LIČNA KARTA", color: 3447003, fields: [
+                { name: "Službenik:", value: val('id_officer'), inline: true },
+                { name: "Građanin:", value: val('id_target'), inline: true },
+                { name: "Datum rođenja:", value: val('id_dob'), inline: true },
+                { name: "Prebivalište:", value: val('id_city'), inline: true }
+            ]}]};
+        } else if (type === 'driver') {
+            return { embeds: [{ title: "🚗 IZDATA VOZAČKA DOZVOLA", color: 3066993, fields: [
+                { name: "Ispitivač:", value: val('dr_officer'), inline: true },
+                { name: "Vozač:", value: val('dr_target'), inline: true },
+                { name: "Kategorija:", value: val('dr_cat'), inline: false }
+            ]}]};
+        } else if (type === 'gun') {
+            return { embeds: [{ title: "🔫 IZDAT ORUŽANI LIST", color: 15844367, fields: [
+                { name: "Službenik:", value: val('gn_officer'), inline: true },
+                { name: "Vlasnik:", value: val('gn_target'), inline: true },
+                { name: "Oružje:", value: val('gn_weapon'), inline: false }
+            ]}]};
+        } else if (type === 'veh') {
+            return { embeds: [{ title: "📑 REGISTRACIJA VOZILA", color: 3066993, fields: [
+                { name: "Službenik:", value: val('vh_officer'), inline: true },
+                { name: "Vlasnik:", value: val('vh_target'), inline: true },
+                { name: "Vozilo:", value: val('vh_model'), inline: true },
+                { name: "Tablice:", value: val('vh_plates'), inline: true }
+            ]}]};
+        } else if (type === 'wanted') {
+            return { embeds: [{ title: "🚨 AKTIVNA POTJERNICA", color: 10038562, fields: [
+                { name: "Nalog izdao:", value: val('wt_officer'), inline: true },
+                { name: "Traženi:", value: val('wt_target'), inline: true },
+                { name: "Nivo opasnosti:", value: val('wt_level'), inline: false },
+                { name: "Razlog:", value: val('wt_reason'), inline: false }
+            ]}]};
+        } else if (type === 'evidence') {
+            return { embeds: [{ title: "🔍 ZAPLJENA DOKAZA", color: 15844367, fields: [
+                { name: "Službenik:", value: val('ev_officer'), inline: true },
+                { name: "Mesto/Lice:", value: val('ev_target'), inline: true },
+                { name: "Zaplenjeno:", value: val('ev_items'), inline: false }
+            ]}]};
+        } else if (type === 'incident') {
+            return { embeds: [{ title: "📝 IZVJEŠTAJ O INCIDENTU", color: 3447003, fields: [
+                { name: "Podnosilac:", value: val('in_officer'), inline: true },
+                { name: "Lokacija:", value: val('in_loc'), inline: true },
+                { name: "Opis:", value: val('in_desc'), inline: false }
+            ]}]};
+        }
+        return null;
+    }
+
     function sendDiscord(e, type) {
         e.preventDefault();
-        let payload = { embeds: [] };
-        let url = WEBHOOKS[type];
-
-        if(type === 'shifts') {
-            payload.embeds.push({ title: "📅 EVIDENCIJA SMJENE", color: 3447003, fields: [
-                { name: "Policajac:", value: document.getElementById('sh_officer').value, inline: true },
-                { name: "Status:", value: document.getElementById('sh_type').value, inline: true },
-                { name: "Napomena:", value: document.getElementById('sh_note').value || "Nema", inline: false }
-            ]});
-        } else if(type === 'arrest_warrants') {
-            payload.embeds.push({ title: "📋 NALOG ZA HAPŠENJE", color: 15158332, fields: [
-                { name: "Nalog izdao:", value: document.getElementById('aw_officer').value, inline: true },
-                { name: "Osumnjičeni:", value: document.getElementById('aw_target').value, inline: true },
-                { name: "Krivično djelo:", value: document.getElementById('aw_crime').value, inline: false }
-            ]});
-        } else if(type === 'arrest_logs') {
-            payload.embeds.push({ title: "📄 ZAPISNIK O HAPŠENJU", color: 10038562, fields: [
-                { name: "Policajac:", value: document.getElementById('al_officer').value, inline: true },
-                { name: "Uhapšeni:", value: document.getElementById('al_target').value, inline: true },
-                { name: "Kazna (minuta):", value: document.getElementById('al_time').value + " min", inline: true },
-                { name: "Razlog / Predmeti:", value: document.getElementById('al_reason').value, inline: false }
-            ]});
-        } else if(type === 'punishment') {
-            payload.embeds.push({ title: "📨 PREKRŠAJNI NALOG", color: 15158332, fields: [
-                { name: "Službeno lice:", value: document.getElementById('p_officer').value, inline: true },
-                { name: "Počinilac:", value: document.getElementById('p_target').value, inline: true },
-                { name: "Prekršaj:", value: document.getElementById('p_type').value, inline: false },
-                { name: "Iznos:", value: document.getElementById('p_price').value + " KM", inline: true }
-            ]});
-        } else if(type === 'id') {
-            payload.embeds.push({ title: "🪪 IZDATA LIČNA KARTA", color: 3447003, fields: [
-                { name: "Službenik:", value: document.getElementById('id_officer').value, inline: true },
-                { name: "Građanin:", value: document.getElementById('id_target').value, inline: true },
-                { name: "Datum rođenja:", value: document.getElementById('id_dob').value, inline: true },
-                { name: "Prebivalište:", value: document.getElementById('id_city').value, inline: true }
-            ]});
-        } else if(type === 'driver') {
-            payload.embeds.push({ title: "🚗 IZDATA VOZAČKA DOZVOLA", color: 3066993, fields: [
-                { name: "Ispitivač:", value: document.getElementById('dr_officer').value, inline: true },
-                { name: "Vozač:", value: document.getElementById('dr_target').value, inline: true },
-                { name: "Kategorija:", value: document.getElementById('dr_cat').value, inline: false }
-            ]});
-        } else if(type === 'gun') {
-            payload.embeds.push({ title: "🔫 IZDAT ORUŽANI LIST", color: 15844367, fields: [
-                { name: "Službenik:", value: document.getElementById('gn_officer').value, inline: true },
-                { name: "Vlasnik:", value: document.getElementById('gn_target').value, inline: true },
-                { name: "Oružje:", value: document.getElementById('gn_weapon').value, inline: false }
-            ]});
-        } else if(type === 'veh') {
-            payload.embeds.push({ title: "📑 REGISTRACIJA VOZILA", color: 3066993, fields: [
-                { name: "Službenik:", value: document.getElementById('vh_officer').value, inline: true },
-                { name: "Vlasnik:", value: document.getElementById('vh_target').value, inline: true },
-                { name: "Vozilo:", value: document.getElementById('vh_model').value, inline: true },
-                { name: "Tablice:", value: document.getElementById('vh_plates').value, inline: true }
-            ]});
-        } else if(type === 'wanted') {
-            payload.embeds.push({ title: "🚨 AKTIVNA POTJERNICA", color: 10038562, fields: [
-                { name: "Nalog izdao:", value: document.getElementById('wt_officer').value, inline: true },
-                { name: "Traženi:", value: document.getElementById('wt_target').value, inline: true },
-                { name: "Nivo opasnosti:", value: document.getElementById('wt_level').value, inline: false },
-                { name: "Razlog:", value: document.getElementById('wt_reason').value, inline: false }
-            ]});
-        } else if(type === 'evidence') {
-            payload.embeds.push({ title: "🔍 ZAPLJENA DOKAZA", color: 15844367, fields: [
-                { name: "Službenik:", value: document.getElementById('ev_officer').value, inline: true },
-                { name: "Mesto/Lice:", value: document.getElementById('ev_target').value, inline: true },
-                { name: "Zaplenjeno:", value: document.getElementById('ev_items').value, inline: false }
-            ]});
-        } else if(type === 'incident') {
-            payload.embeds.push({ title: "📝 IZVJEŠTAJ O INCIDENTU", color: 3447003, fields: [
-                { name: "Podnosilac:", value: document.getElementById('in_officer').value, inline: true },
-                { name: "Lokacija:", value: document.getElementById('in_loc').value, inline: true },
-                { name: "Opis:", value: document.getElementById('in_desc').value, inline: false }
-            ]});
-        }
 
         const statusDiv = document.getElementById('status');
+        const url = WEBHOOKS[type];
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+
+        if (!url) {
+            statusDiv.style.color = "red";
+            statusDiv.innerText = "Greška: ne postoji webhook za '" + type + "'.";
+            return;
+        }
+
+        const payload = buildPayload(type);
+        if (!payload) {
+            statusDiv.style.color = "red";
+            statusDiv.innerText = "Greška: nepoznat tip forme '" + type + "'.";
+            return;
+        }
+
+        if (submitBtn) submitBtn.disabled = true;
         statusDiv.style.color = "yellow";
         statusDiv.innerText = "Šaljem u Discord...";
 
@@ -290,19 +334,31 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         })
-        .then(res => {
-            if(res.ok || res.status === 204) {
+        .then(async res => {
+            if (res.ok || res.status === 204) {
                 statusDiv.style.color = "#00ff88";
                 statusDiv.innerText = "Uspešno poslato i zavedeno u kanal!";
                 e.target.reset();
             } else {
+                let detail = "";
+                try {
+                    const body = await res.text();
+                    detail = body ? ("\n" + body) : "";
+                } catch (_) { /* ignore */ }
                 statusDiv.style.color = "red";
-                statusDiv.innerText = "Greška pri slanju! Status: " + res.status;
+                statusDiv.innerText = "Greška pri slanju! Status: " + res.status + detail;
             }
         })
         .catch(err => {
             statusDiv.style.color = "red";
-            statusDiv.innerText = "Mrežna greška pri slanju!";
+            if (window.location.protocol === 'file:') {
+                statusDiv.innerText = "Mrežna greška: browser blokira fetch jer je fajl otvoren preko file://. Pokreni ga preko lokalnog servera (vidi upozorenje na vrhu stranice).";
+            } else {
+                statusDiv.innerText = "Mrežna greška pri slanju! (" + err.message + ")";
+            }
+        })
+        .finally(() => {
+            if (submitBtn) submitBtn.disabled = false;
         });
     }
 </script>
