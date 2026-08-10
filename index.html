@@ -1,366 +1,749 @@
 <!DOCTYPE html>
 <html lang="sr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MUP RS - Centralni Portal</title>
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0b192c; color: #ffffff; padding: 15px; margin: 0; }
-        .container { background-color: #1e3e62; padding: 20px; border-radius: 12px; max-width: 650px; margin: auto; box-shadow: 0 5px 20px rgba(0,0,0,0.5); border-top: 6px solid #0056b3; }
-        h2 { text-align: center; margin-top: 0; text-transform: uppercase; letter-spacing: 1px; color: #ffffff; }
-        p.subtitle { text-align: center; font-size: 13px; color: #b0c4de; margin-bottom: 20px; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MUP RS — Centralni Informacioni Sistem</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0d12;
+    --panel:#11151c;
+    --panel-2:#161b23;
+    --line:#232a35;
+    --line-soft:#1a2029;
+    --white:#f4f5f7;
+    --white-dim:#c7cbd4;
+    --muted:#7d8798;
+    --steel:#3d5a78;
+    --steel-bright:#5b84ac;
+    --danger:#b5484f;
+    --ok:#3f8f68;
+    --warn:#a9822f;
+    --radius:3px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(circle at 15% 0%, rgba(61,90,120,0.10), transparent 45%),
+      var(--bg);
+    color:var(--white-dim);
+    font-family:'Inter',system-ui,sans-serif;
+    min-height:100vh;
+  }
+  ::selection{background:var(--steel);color:#fff;}
 
-        .warning-banner { background-color: #5c1f1f; border: 1px solid #ff4d4d; color: #ffdada; padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; display: none; }
-        .warning-banner.show { display: block; }
+  /* ---------- top bar ---------- */
+  .topbar{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 22px;
+    border-bottom:1px solid var(--line);
+    background:var(--panel);
+  }
+  .brand{display:flex;align-items:center;gap:12px;}
+  .crest{
+    width:34px;height:34px;flex:0 0 auto;
+    border:1px solid var(--white-dim);
+    border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Oswald',sans-serif;font-weight:700;font-size:12px;
+    letter-spacing:0.5px;color:var(--white);
+  }
+  .brand-text h1{
+    margin:0;font-family:'Oswald',sans-serif;font-weight:600;
+    font-size:15px;letter-spacing:2px;color:var(--white);text-transform:uppercase;
+  }
+  .brand-text p{margin:1px 0 0;font-size:10.5px;letter-spacing:1.2px;color:var(--muted);text-transform:uppercase;}
+  .topbar-right{display:flex;align-items:center;gap:14px;font-size:12px;}
+  .status-pill{
+    display:flex;align-items:center;gap:6px;
+    padding:5px 10px;border:1px solid var(--line);border-radius:20px;
+    font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ok);
+  }
+  .status-dot{width:6px;height:6px;border-radius:50%;background:var(--ok);box-shadow:0 0 6px var(--ok);}
+  .who{color:var(--white-dim);font-size:12.5px;}
+  .who b{color:var(--white);font-weight:600;}
+  .btn-ghost{
+    background:transparent;border:1px solid var(--line);color:var(--white-dim);
+    padding:6px 12px;border-radius:var(--radius);font-size:11.5px;letter-spacing:0.5px;
+    cursor:pointer;font-family:'Inter',sans-serif;text-transform:uppercase;
+  }
+  .btn-ghost:hover{border-color:var(--white-dim);color:var(--white);}
 
-        /* Meni sa dugmićima */
-        .nav-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px; justify-content: center; }
-        .tab-btn { background-color: #000000; border: 1px solid #0056b3; color: #ffffff; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 12px; transition: 0.2s; }
-        .tab-btn.active { background-color: #0056b3; border-color: #0088ff; }
+  /* ---------- layout ---------- */
+  .layout{display:flex;max-width:1280px;margin:0 auto;min-height:calc(100vh - 63px);}
+  .sidebar{
+    width:270px;flex:0 0 auto;border-right:1px solid var(--line);
+    padding:20px 16px;background:var(--panel);
+  }
+  .side-block{margin-bottom:26px;}
+  .side-title{
+    font-family:'Oswald',sans-serif;font-size:11px;letter-spacing:2px;
+    color:var(--muted);text-transform:uppercase;margin:0 0 10px;
+    display:flex;align-items:center;justify-content:space-between;
+  }
+  .side-title span.tag{
+    font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--steel-bright);
+    border:1px solid var(--line);padding:1px 6px;border-radius:20px;letter-spacing:0;
+  }
+  .lb-row{
+    display:flex;align-items:center;gap:10px;padding:8px 6px;
+    border-bottom:1px solid var(--line-soft);
+  }
+  .lb-rank{
+    font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);
+    width:16px;flex:0 0 auto;
+  }
+  .lb-name{flex:1;font-size:12.5px;color:var(--white-dim);}
+  .lb-count{font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--white);}
+  .lb-empty{font-size:11.5px;color:var(--muted);padding:10px 6px;line-height:1.5;}
+  .side-note{font-size:10px;color:var(--muted);line-height:1.5;margin-top:8px;}
 
-        /* Forme */
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        .form-group { margin-bottom: 12px; }
-        label { display: block; margin-bottom: 4px; font-size: 13px; font-weight: bold; color: #d1e8ff; }
-        input, select, textarea { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #0056b3; background-color: #000000; color: #ffffff; box-sizing: border-box; font-size: 14px; }
-        button.submit-btn { width: 100%; padding: 12px; background-color: #0056b3; border: none; border-radius: 6px; color: white; font-size: 15px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        button.submit-btn:hover { background-color: #0088ff; }
-        button.submit-btn:disabled { background-color: #444444; cursor: not-allowed; }
+  .main{flex:1;padding:26px 30px;min-width:0;}
+  .page-head{margin-bottom:22px;}
+  .page-head h2{
+    font-family:'Oswald',sans-serif;font-size:19px;letter-spacing:1px;
+    color:var(--white);margin:0 0 4px;text-transform:uppercase;
+  }
+  .page-head p{margin:0;font-size:12.5px;color:var(--muted);}
 
-        #status { margin-top: 15px; text-align: center; font-weight: bold; white-space: pre-wrap; }
-    </style>
+  /* ---------- tabs ---------- */
+  .nav-tabs{display:flex;flex-wrap:wrap;gap:0;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;margin-bottom:22px;}
+  .tab-btn{
+    background:var(--panel);border:none;border-right:1px solid var(--line);
+    color:var(--muted);padding:10px 14px;cursor:pointer;font-size:11.5px;
+    letter-spacing:0.6px;text-transform:uppercase;font-family:'Inter',sans-serif;font-weight:600;
+    transition:0.15s;
+  }
+  .tab-btn:last-child{border-right:none;}
+  .tab-btn:hover{color:var(--white-dim);background:var(--panel-2);}
+  .tab-btn.active{background:var(--steel);color:#fff;}
+
+  /* ---------- forms ---------- */
+  .card{
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:22px 24px;
+  }
+  .tab-content{display:none;}
+  .tab-content.active{display:block;}
+  .card h3{
+    margin:0 0 18px;font-family:'Oswald',sans-serif;font-size:14px;
+    letter-spacing:1px;color:var(--white);text-transform:uppercase;
+    padding-bottom:10px;border-bottom:1px solid var(--line);
+  }
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 16px;}
+  .form-group{margin-bottom:0;}
+  .form-group.full{grid-column:1 / -1;}
+  label{display:block;margin-bottom:5px;font-size:10.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;}
+  input,select,textarea{
+    width:100%;padding:9px 11px;border-radius:var(--radius);border:1px solid var(--line);
+    background:var(--bg);color:var(--white);box-sizing:border-box;font-size:13.5px;
+    font-family:'Inter',sans-serif;
+  }
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--steel-bright);}
+  textarea{resize:vertical;}
+  button.submit-btn{
+    margin-top:18px;padding:11px 18px;background:var(--white);border:1px solid var(--white);
+    border-radius:var(--radius);color:#0a0d12;font-size:12px;font-weight:700;letter-spacing:1px;
+    text-transform:uppercase;cursor:pointer;font-family:'Inter',sans-serif;
+  }
+  button.submit-btn:hover{background:transparent;color:var(--white);}
+  #status{margin-top:14px;font-size:12px;font-family:'JetBrains Mono',monospace;}
+
+  /* ---------- gate (login/signup) ---------- */
+  .gate{
+    position:fixed;inset:0;background:var(--bg);z-index:100;
+    display:flex;align-items:center;justify-content:center;padding:20px;
+  }
+  .gate-card{
+    width:100%;max-width:380px;border:1px solid var(--line);background:var(--panel);
+    border-radius:var(--radius);padding:30px 28px;
+  }
+  .gate-crest{
+    width:46px;height:46px;border:1px solid var(--white-dim);border-radius:50%;
+    display:flex;align-items:center;justify-content:center;margin:0 auto 16px;
+    font-family:'Oswald',sans-serif;font-weight:700;font-size:15px;color:var(--white);
+  }
+  .gate-card h2{
+    text-align:center;font-family:'Oswald',sans-serif;font-size:15px;letter-spacing:2px;
+    color:var(--white);text-transform:uppercase;margin:0 0 2px;
+  }
+  .gate-card p.sub{text-align:center;font-size:11px;color:var(--muted);margin:0 0 22px;letter-spacing:0.5px;}
+  .gate-switch{display:flex;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;margin-bottom:20px;}
+  .gate-switch button{
+    flex:1;background:var(--bg);border:none;padding:9px;color:var(--muted);font-size:11px;
+    letter-spacing:1px;text-transform:uppercase;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;
+  }
+  .gate-switch button.active{background:var(--steel);color:#fff;}
+  .gate-form{display:none;}
+  .gate-form.active{display:block;}
+  .gate-form .form-group{margin-bottom:14px;}
+  .gate-hint{font-size:10px;color:var(--muted);line-height:1.6;margin-top:14px;border-top:1px solid var(--line-soft);padding-top:12px;}
+
+  /* ---------- settings modal ---------- */
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(5,7,10,0.75);z-index:90;
+    display:none;align-items:center;justify-content:center;padding:20px;
+  }
+  .modal-overlay.active{display:flex;}
+  .modal{
+    width:100%;max-width:420px;background:var(--panel);border:1px solid var(--line);
+    border-radius:var(--radius);padding:24px 26px;
+  }
+  .modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid var(--line);}
+  .modal-head h3{margin:0;font-family:'Oswald',sans-serif;font-size:13px;letter-spacing:1.5px;color:var(--white);text-transform:uppercase;}
+  .modal-close{background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;}
+  .setting-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line-soft);}
+  .setting-row:last-child{border-bottom:none;}
+  .setting-label{font-size:12.5px;color:var(--white-dim);}
+  .setting-label small{display:block;font-size:10.5px;color:var(--muted);margin-top:2px;}
+  .toggle{
+    width:38px;height:20px;border-radius:20px;background:var(--bg);border:1px solid var(--line);
+    position:relative;cursor:pointer;flex:0 0 auto;
+  }
+  .toggle::after{
+    content:'';position:absolute;top:1px;left:1px;width:16px;height:16px;border-radius:50%;
+    background:var(--muted);transition:0.15s;
+  }
+  .toggle.on{background:var(--steel);border-color:var(--steel);}
+  .toggle.on::after{left:19px;background:#fff;}
+
+  footer{
+    text-align:center;padding:16px;font-size:10px;color:var(--muted);
+    font-family:'JetBrains Mono',monospace;letter-spacing:0.5px;border-top:1px solid var(--line);
+  }
+
+  @media(max-width:820px){
+    .layout{flex-direction:column;}
+    .sidebar{width:100%;border-right:none;border-bottom:1px solid var(--line);}
+    .form-grid{grid-template-columns:1fr;}
+  }
+</style>
 </head>
 <body>
 
-<div class="container">
-    <h2>MUP REPUBLIKE SRPSKE</h2>
-    <p class="subtitle">Centralni Informacioni Sistem</p>
+<!-- ================= LOGIN / SIGNUP GATE ================= -->
+<div class="gate" id="gate">
+  <div class="gate-card">
+    <div class="gate-crest">RS</div>
+    <h2>MUP Republike Srpske</h2>
+    <p class="sub">Centralni informacioni sistem — pristup ograničen</p>
 
-    <div id="fileWarning" class="warning-banner">
-        ⚠️ Otvorio si ovaj fajl direktno preko <b>file://</b> putanje. Neki browseri (npr. Chrome) zbog toga blokiraju slanje ka Discordu.
-        Rešenje: postavi fajl na hosting (GitHub Pages, Netlify) ili ga pokreni lokalno preko servera, npr:
-        <code>python -m http.server</code> pa otvori <code>http://localhost:8000/mup_rs_portal.html</code>.
+    <div class="gate-switch">
+      <button id="gateBtnLogin" class="active" onclick="switchGate('login')">Prijava</button>
+      <button id="gateBtnSignup" onclick="switchGate('signup')">Registracija</button>
     </div>
 
-    <!-- Meni za izbor forme -->
-    <div class="nav-tabs">
-        <button class="tab-btn active" onclick="openTab(event, 'shifts')">📅 Smjena</button>
-        <button class="tab-btn" onclick="openTab(event, 'arrest_warrants')">📋 Nalog za Hapšenje</button>
-        <button class="tab-btn" onclick="openTab(event, 'arrest_logs')">📄 Hapšenje Log</button>
-        <button class="tab-btn" onclick="openTab(event, 'punishment')">📨 Kazna</button>
-        <button class="tab-btn" onclick="openTab(event, 'id')">🪪 Lična Karta</button>
-        <button class="tab-btn" onclick="openTab(event, 'driver')">🚗 Vozačka</button>
-        <button class="tab-btn" onclick="openTab(event, 'gun')">🔫 Oružje</button>
-        <button class="tab-btn" onclick="openTab(event, 'veh')">📑 Saobraćajna</button>
-        <button class="tab-btn" onclick="openTab(event, 'wanted')">🚨 Potjernica</button>
-        <button class="tab-btn" onclick="openTab(event, 'evidence')">🔍 Dokazi</button>
-        <button class="tab-btn" onclick="openTab(event, 'incident')">📝 Incident</button>
+    <form id="loginForm" class="gate-form active" onsubmit="handleLogin(event)">
+      <div class="form-group">
+        <label>Korisničko ime</label>
+        <input type="text" id="loginUser" required>
+      </div>
+      <div class="form-group">
+        <label>Lozinka</label>
+        <input type="password" id="loginPass" required>
+      </div>
+      <button type="submit" class="submit-btn" style="width:100%;">Prijavi se</button>
+      <div id="loginStatus" style="font-size:11.5px;font-family:'JetBrains Mono',monospace;margin-top:10px;"></div>
+    </form>
+
+    <form id="signupForm" class="gate-form" onsubmit="handleSignup(event)">
+      <div class="form-group">
+        <label>Ime i prezime</label>
+        <input type="text" id="suName" required>
+      </div>
+      <div class="form-group">
+        <label>Korisničko ime</label>
+        <input type="text" id="suUser" required>
+      </div>
+      <div class="form-group">
+        <label>Čin / Jedinica</label>
+        <input type="text" id="suRank" placeholder="npr. Mlađi patrolni policajac" required>
+      </div>
+      <div class="form-group">
+        <label>Lozinka</label>
+        <input type="password" id="suPass" required>
+      </div>
+      <button type="submit" class="submit-btn" style="width:100%;">Pošalji zahtjev za registraciju</button>
+      <div id="signupStatus" style="font-size:11.5px;font-family:'JetBrains Mono',monospace;margin-top:10px;"></div>
+    </form>
+
+    <div class="gate-hint">
+      Ovo je statička stranica bez servera — prijava služi za identifikaciju u sistemu, ne kao bezbjednosna zaštita. Ne koristi ovdje lozinku koju koristiš na drugim mjestima.
     </div>
-
-    <!-- 1. Police Shifts -->
-    <form id="formShifts" class="tab-content active" onsubmit="sendDiscord(event, 'shifts')">
-        <h3>Prijava / Odjava Smjene</h3>
-        <div class="form-group"><label>Ime i službeni broj:</label><input type="text" id="sh_officer" required></div>
-        <div class="form-group"><label>Tip aktivnosti:</label>
-            <select id="sh_type"><option>Početak smjene</option><option>Kraj smjene</option><option>Pauza</option></select>
-        </div>
-        <div class="form-group"><label>Napomena / Partner u patroli:</label><input type="text" id="sh_note"></div>
-        <button type="submit" class="submit-btn">EVIDENTIRAJ SMJENU</button>
-    </form>
-
-    <!-- 2. Arrest Warrants -->
-    <form id="formArrest_warrants" class="tab-content" onsubmit="sendDiscord(event, 'arrest_warrants')">
-        <h3>Nalog za Hapšenje (Arrest Warrant)</h3>
-        <div class="form-group"><label>Nalog izdao (Komesar/Inspektor):</label><input type="text" id="aw_officer" required></div>
-        <div class="form-group"><label>Ime osumnjičenog:</label><input type="text" id="aw_target" required></div>
-        <div class="form-group"><label>Krivično djelo:</label><textarea id="aw_crime" rows="2" required></textarea></div>
-        <button type="submit" class="submit-btn">IZDAJ NALOG ZA HAPŠENJE</button>
-    </form>
-
-    <!-- 3. Arrest Logs -->
-    <form id="formArrest_logs" class="tab-content" onsubmit="sendDiscord(event, 'arrest_logs')">
-        <h3>Zapisnik o Lišenju Slobode</h3>
-        <div class="form-group"><label>Policajac koji je izvršio hapšenje:</label><input type="text" id="al_officer" required></div>
-        <div class="form-group"><label>Uhapšeno lice:</label><input type="text" id="al_target" required></div>
-        <div class="form-group"><label>Trajanje zatvorske kazne (minuta):</label><input type="number" id="al_time" required></div>
-        <div class="form-group"><label>Razlog i oduzeti predmeti:</label><textarea id="al_reason" rows="2" required></textarea></div>
-        <button type="submit" class="submit-btn">PROKNJIŽI HAPŠENJE</button>
-    </form>
-
-    <!-- 4. Punishment Warrants -->
-    <form id="formPunishment" class="tab-content" onsubmit="sendDiscord(event, 'punishment')">
-        <h3>Izdavanje Kazne / Nologa</h3>
-        <div class="form-group"><label>Službeno lice:</label><input type="text" id="p_officer" required></div>
-        <div class="form-group"><label>Počinilac:</label><input type="text" id="p_target" required></div>
-        <div class="form-group"><label>Prekršaj:</label><input type="text" id="p_type" placeholder="npr. Prolazak kroz crveno" required></div>
-        <div class="form-group"><label>Iznos kazne (KM):</label><input type="number" id="p_price" required></div>
-        <button type="submit" class="submit-btn">IZDAJ KAZNU</button>
-    </form>
-
-    <!-- 5. ID Cards -->
-    <form id="formId" class="tab-content" onsubmit="sendDiscord(event, 'id')">
-        <h3>Izdavanje Lične Karte</h3>
-        <div class="form-group"><label>Službenik:</label><input type="text" id="id_officer" required></div>
-        <div class="form-group"><label>Ime i prezime građanina:</label><input type="text" id="id_target" required></div>
-        <div class="form-group"><label>Datum rođenja:</label><input type="text" id="id_dob" placeholder="DD.MM.GGGG" required></div>
-        <div class="form-group"><label>Prebivalište:</label><input type="text" id="id_city" required></div>
-        <button type="submit" class="submit-btn">IZDAJ LIČNU KARTU</button>
-    </form>
-
-    <!-- 6. Driver Licenses -->
-    <form id="formDriver" class="tab-content" onsubmit="sendDiscord(event, 'driver')">
-        <h3>Izdavanje Vozačke Dozvole</h3>
-        <div class="form-group"><label>Ispitivač / Policajac:</label><input type="text" id="dr_officer" required></div>
-        <div class="form-group"><label>Vozač:</label><input type="text" id="dr_target" required></div>
-        <div class="form-group"><label>Kategorija:</label>
-            <select id="dr_cat"><option>B Kategorija</option><option>A Kategorija</option><option>C Kategorija</option><option>Sve kategorije</option></select>
-        </div>
-        <button type="submit" class="submit-btn">IZDAJ VOZAČKU</button>
-    </form>
-
-    <!-- 7. Gun Licenses -->
-    <form id="formGun" class="tab-content" onsubmit="sendDiscord(event, 'gun')">
-        <h3>Izdavanje Dozvole za Oružje</h3>
-        <div class="form-group"><label>Službenik:</label><input type="text" id="gn_officer" required></div>
-        <div class="form-group"><label>Vlasnik oružja:</label><input type="text" id="gn_target" required></div>
-        <div class="form-group"><label>Model oružja i serijski broj:</label><input type="text" id="gn_weapon" required></div>
-        <button type="submit" class="submit-btn">IZDAJ DOZVOLU</button>
-    </form>
-
-    <!-- 8. Vehicle Registration -->
-    <form id="formVeh" class="tab-content" onsubmit="sendDiscord(event, 'veh')">
-        <h3>Registracija Vozila</h3>
-        <div class="form-group"><label>Službenik:</label><input type="text" id="vh_officer" required></div>
-        <div class="form-group"><label>Vlasnik vozila:</label><input type="text" id="vh_target" required></div>
-        <div class="form-group"><label>Marka i model vozila:</label><input type="text" id="vh_model" required></div>
-        <div class="form-group"><label>Registarske tablice:</label><input type="text" id="vh_plates" required></div>
-        <button type="submit" class="submit-btn">REGISTROUJ VOZILO</button>
-    </form>
-
-    <!-- 9. Wanted List -->
-    <form id="formWanted" class="tab-content" onsubmit="sendDiscord(event, 'wanted')">
-        <h3>Raspisivanje Potjernice</h3>
-        <div class="form-group"><label>Nalog izdao:</label><input type="text" id="wt_officer" required></div>
-        <div class="form-group"><label>Traženo lice:</label><input type="text" id="wt_target" required></div>
-        <div class="form-group"><label>Nivo opasnosti:</label>
-            <select id="wt_level"><option>🟢 Nizak rizik</option><option>🟡 Srednji rizik</option><option>🔴 Visok rizik (Naoružan)</option></select>
-        </div>
-        <div class="form-group"><label>Razlog:</label><textarea id="wt_reason" rows="2" required></textarea></div>
-        <button type="submit" class="submit-btn">RASPIŠI POTJERNICU</button>
-    </form>
-
-    <!-- 10. Evidence Logs -->
-    <form id="formEvidence" class="tab-content" onsubmit="sendDiscord(event, 'evidence')">
-        <h3>Zapisnik o Zapljeni Dokaza</h3>
-        <div class="form-group"><label>Inspektor/Policajac:</label><input type="text" id="ev_officer" required></div>
-        <div class="form-group"><label>Lice/Mesto zapljene:</label><input type="text" id="ev_target" required></div>
-        <div class="form-group"><label>Zaplenjeni predmeti / Narkotici / Oružje:</label><textarea id="ev_items" rows="2" required></textarea></div>
-        <button type="submit" class="submit-btn">SAČUVAJ DOKAZE</button>
-    </form>
-
-    <!-- 11. Incident Reports -->
-    <form id="formIncident" class="tab-content" onsubmit="sendDiscord(event, 'incident')">
-        <h3>Izvještaj o Incidentu</h3>
-        <div class="form-group"><label>Izvještaj sastavio:</label><input type="text" id="in_officer" required></div>
-        <div class="form-group"><label>Lokacija incidenta:</label><input type="text" id="in_loc" required></div>
-        <div class="form-group"><label>Detaljan opis događaja:</label><textarea id="in_desc" rows="3" required></textarea></div>
-        <button type="submit" class="submit-btn">POŠALJI IZVJEŠTAJ</button>
-    </form>
-
-    <div id="status"></div>
+  </div>
 </div>
 
+<!-- ================= SETTINGS MODAL ================= -->
+<div class="modal-overlay" id="settingsOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>Podešavanja</h3>
+      <button class="modal-close" onclick="toggleSettings(false)">✕</button>
+    </div>
+    <div class="setting-row">
+      <div class="setting-label">Zvučna obavještenja<small>Zvuk pri uspješnom slanju obrasca</small></div>
+      <div class="toggle" id="toggleSound" onclick="toggleSetting(this,'sound')"></div>
+    </div>
+    <div class="setting-row">
+      <div class="setting-label">Kompaktan prikaz<small>Manji razmak između polja u obrascima</small></div>
+      <div class="toggle" id="toggleCompact" onclick="toggleSetting(this,'compact')"></div>
+    </div>
+    <div class="setting-row">
+      <div class="setting-label">Automatsko popunjavanje<small>Upamti ime službenika u ovoj sesiji</small></div>
+      <div class="toggle on" id="toggleAutofill" onclick="toggleSetting(this,'autofill')"></div>
+    </div>
+    <div class="gate-hint">Podešavanja se čuvaju samo tokom trenutne sesije (do zatvaranja stranice).</div>
+  </div>
+</div>
+
+<!-- ================= APP ================= -->
+<div class="topbar">
+  <div class="brand">
+    <div class="crest">RS</div>
+    <div class="brand-text">
+      <h1>MUP Republike Srpske</h1>
+      <p>Centralni informacioni sistem</p>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="status-pill"><span class="status-dot"></span>SISTEM AKTIVAN</div>
+    <div class="who">Prijavljen: <b id="whoName">—</b></div>
+    <button class="btn-ghost" onclick="toggleSettings(true)">Podešavanja</button>
+    <button class="btn-ghost" onclick="logout()">Odjava</button>
+  </div>
+</div>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="side-block">
+      <div class="side-title">Rang lista <span class="tag">SESIJA</span></div>
+      <div id="leaderboardList">
+        <div class="lb-empty">Nema još evidentiranih kazni u ovoj sesiji.</div>
+      </div>
+      <div class="side-note">Broji se od otvaranja stranice — ne čuva se trajno bez servera.</div>
+    </div>
+    <div class="side-block">
+      <div class="side-title">Statistika sesije</div>
+      <div class="lb-row"><div class="lb-name">Ukupno obrazaca poslato</div><div class="lb-count" id="statTotal">0</div></div>
+      <div class="lb-row"><div class="lb-name">Izdatih kazni</div><div class="lb-count" id="statFines">0</div></div>
+      <div class="lb-row" style="border-bottom:none;"><div class="lb-name">Aktivnih naloga</div><div class="lb-count" id="statWarrants">0</div></div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="page-head">
+      <h2>Operativni obrasci</h2>
+      <p>Izaberi obrazac ispod i pošalji zapisnik u odgovarajući kanal.</p>
+    </div>
+
+    <div class="nav-tabs">
+      <button class="tab-btn active" onclick="openTab(event, 'shifts')">Smjena</button>
+      <button class="tab-btn" onclick="openTab(event, 'arrest_warrants')">Nalog za hapšenje</button>
+      <button class="tab-btn" onclick="openTab(event, 'arrest_logs')">Hapšenje — log</button>
+      <button class="tab-btn" onclick="openTab(event, 'punishment')">Kazna</button>
+      <button class="tab-btn" onclick="openTab(event, 'id')">Lična karta</button>
+      <button class="tab-btn" onclick="openTab(event, 'driver')">Vozačka</button>
+      <button class="tab-btn" onclick="openTab(event, 'gun')">Oružje</button>
+      <button class="tab-btn" onclick="openTab(event, 'veh')">Saobraćajna</button>
+      <button class="tab-btn" onclick="openTab(event, 'wanted')">Potjernica</button>
+      <button class="tab-btn" onclick="openTab(event, 'evidence')">Dokazi</button>
+      <button class="tab-btn" onclick="openTab(event, 'incident')">Incident</button>
+    </div>
+
+    <div class="card">
+      <form id="formShifts" class="tab-content active" onsubmit="sendDiscord(event, 'shifts')">
+        <h3>Prijava / odjava smjene</h3>
+        <div class="form-grid">
+          <div class="form-group"><label>Ime i službeni broj</label><input type="text" id="sh_officer" required></div>
+          <div class="form-group"><label>Tip aktivnosti</label>
+            <select id="sh_type"><option>Početak smjene</option><option>Kraj smjene</option><option>Pauza</option></select>
+          </div>
+          <div class="form-group full"><label>Napomena / partner u patroli</label><input type="text" id="sh_note"></div>
+        </div>
+        <button type="submit" class="submit-btn">Evidentiraj smjenu</button>
+      </form>
+
+      <form id="formArrest_warrants" class="tab-content" onsubmit="sendDiscord(event, 'arrest_warrants')">
+        <h3>Nalog za hapšenje</h3>
+        <div class="form-grid">
+          <div class="form-group"><label>Nalog izdao (komesar/inspektor)</label><input type="text" id="aw_officer" required></div>
+          <div class="form-group"><label>Ime osumnjičenog</label><input type="text" id="aw_target" required></div>
+          <div class="form-group full"><label>Krivično djelo</label><textarea id="aw_crime" rows="2" required></textarea></div>
+        </div>
+        <button type="submit" class="submit-btn">Izdaj nalog za hapšenje</button>
+      </form>
+
+      <form id="formArrest_logs" class="tab-content" onsubmit="sendDiscord(event, 'arrest_logs')">
+        <h3>Zapisnik o lišenju slobode</h3>
+        <div class="form-grid">
+          <div class="form-group"><label>Policajac koji je izvršio hapšenje</label><input type="text" id="al_officer" required></div>
+          <div class="form-group"><label>Uhapšeno lice</label><input type="text" id="al_target" required></div>
+          <div class="form-group"><label>Trajanje zatvorske kazne (minuta)</label><input type="number" id="al_time" required></div>
+          <div class="form-group full"><label>Razlog i oduzeti predmeti</label><textarea id="al_reason" rows="2" required></textarea></div>
+        </div>
+        <button type="submit" class="submit-btn">Proknjiži hapšenje</button>
+      </form>
+
+      <form id="formPunishment" class="tab-content" onsubmit="sendDiscord(event, 'punishment')">
+        <h3>Izdavanje kazne</h3>
+        <div class="form-grid">
+          <div class="form-group"><label>Službeno lice</label><input type="text" id="p_officer" required></div>
+          <div class="form-group"><label>Počinilac</label><input type="text" id="p_target" required></div>
+          <div class="form-group"><label>Prekršaj</label><input type="text" id="p_type" placeholder="npr. Prolazak kroz crveno" required></div>
+          <div class="form-group"><label>Iznos kazne (KM)</label><input type="number" id="p_price" required></div>
+        </div>
+        <button type="submit" class="submit-btn">Izdaj kaznu</button>
+      </form>
+
+      <form id="formId" class="tab-content" onsubmit="sendDiscord(event, 'id')">
+        <h3>Izdavanje lične karte</h3>
+        <div class="form-grid">
+          <div class="form-group"><label>Službenik</label><input type="text" id="id_officer" required></div>
+          <div class="form-group"><label>Ime i prezime građanina</label><input type="text" id="id_target" required></div>
+          <div class="form-group"><label>Datum rođenja</label><input type="text" id="id_dob" placeholder="DD.MM.GGGG" required></div>
+          <div class="form-group"><label>Prebivalište</label><input type="text" id="id_city" required></div>
+        </div>
+        <button type="submit" class="submit-btn">Izdaj ličnu kartu</button>
+      </form>
+
+      <form id="formDriver" class="tab-content" onsubmit="sendDiscord(event, 'driver')">
+        <h3>Izdavanje vozačke dozvole</h3>
+        <div class="form-grid">
+          <div class="form-group"><label>Ispitivač / policajac</label><input type="text" id="dr_officer" required></div>
+          <div class="form-group"><label>Vozač</label><input type="text" id="dr_target" required></div>
+          <div class="form-group full"><label>Kategorija</label>
+            <select id="dr_cat"><option>B kategorija</option><option>A kategorija</option><option>C kategorija</option><option>Sve kategorije</option></select>
+          </div>
+        </div>
+        <button type="submit" class="submit-btn">Izdaj vozačku</button>
+      </form>
+
+      <form id="formGun" class="tab-content" onsubmit="sendDiscord(event, 'gun')">
+        <h3>Izdavanje dozvole za oružje</h3>
+        <div class="form-grid">
+          <div class="form-group"><label>Službenik</label><input type="text" id="gn_officer" required></div>
+          <div class="form-group"><label>Vlasnik oružja</label><input type="text" id="gn_target" required></div>
+          <div class="form-group full"><label>Model oružja i serijski broj</label><input type="text" id="gn_weapon" required></div>
+        </div>
+        <button type="submit" class="submit-btn">Izdaj dozvolu</button>
+      </form>
+
+      <form id="formVeh" class="tab-content" onsubmit="sendDiscord(event, 'veh')">
+        <h3>Registracija vozila</h3>
+        <div class="form-grid">
+          <div class="form-group"><label>Službenik</label><input type="text" id="vh_officer" required></div>
+          <div class="form-group"><label>Vlasnik vozila</label><input type="text" id="vh_target" required></div>
+          <div class="form-group"><label>Marka i model vozila</label><input type="text" id="vh_model" required></div>
+          <div class="form-group"><label>Registarske tablice</label><input type="text" id="vh_plates" required></div>
+        </div>
+        <button type="submit" class="submit-btn">Registruj vozilo</button>
+      </form>
+
+      <form id="formWanted" class="tab-content" onsubmit="sendDiscord(event, 'wanted')">
+        <h3>Raspisivanje potjernice</h3>
+        <div class="form-grid">
+          <div class="form-group"><label>Nalog izdao</label><input type="text" id="wt_officer" required></div>
+          <div class="form-group"><label>Traženo lice</label><input type="text" id="wt_target" required></div>
+          <div class="form-group full"><label>Nivo opasnosti</label>
+            <select id="wt_level"><option>Nizak rizik</option><option>Srednji rizik</option><option>Visok rizik (naoružan)</option></select>
+          </div>
+          <div class="form-group full"><label>Razlog</label><textarea id="wt_reason" rows="2" required></textarea></div>
+        </div>
+        <button type="submit" class="submit-btn">Raspiši potjernicu</button>
+      </form>
+
+      <form id="formEvidence" class="tab-content" onsubmit="sendDiscord(event, 'evidence')">
+        <h3>Zapisnik o zapljeni dokaza</h3>
+        <div class="form-grid">
+          <div class="form-group"><label>Inspektor / policajac</label><input type="text" id="ev_officer" required></div>
+          <div class="form-group"><label>Lice / mjesto zapljene</label><input type="text" id="ev_target" required></div>
+          <div class="form-group full"><label>Zaplijenjeni predmeti / narkotici / oružje</label><textarea id="ev_items" rows="2" required></textarea></div>
+        </div>
+        <button type="submit" class="submit-btn">Sačuvaj dokaze</button>
+      </form>
+
+      <form id="formIncident" class="tab-content" onsubmit="sendDiscord(event, 'incident')">
+        <h3>Izvještaj o incidentu</h3>
+        <div class="form-grid">
+          <div class="form-group"><label>Izvještaj sastavio</label><input type="text" id="in_officer" required></div>
+          <div class="form-group"><label>Lokacija incidenta</label><input type="text" id="in_loc" required></div>
+          <div class="form-group full"><label>Detaljan opis događaja</label><textarea id="in_desc" rows="3" required></textarea></div>
+        </div>
+        <button type="submit" class="submit-btn">Pošalji izvještaj</button>
+      </form>
+
+      <div id="status"></div>
+    </div>
+  </div>
+</div>
+
+<footer>MUP RS — Centralni informacioni sistem &middot; Interna upotreba</footer>
+
 <script>
-    const WEBHOOKS = {
-        shifts: "https://discord.com/api/webhooks/1536330816060133386/e6LQFGoA2zHvuQ7c5xzOa1KJrBoipv8sOivyMbgR9CIqhJY8cK107v3LC0kSC8k1J5_9",
-        arrest_warrants: "https://discord.com/api/webhooks/1536330722569097318/yn64NuOaKz1X0Up_FjhHb5W7UxRvwMqFypSWp8kmlaI5KQPP_KefJkZ9xI5AHRTBG8ic",
-        arrest_logs: "https://discord.com/api/webhooks/1536330625039208448/TQUUBSWUfXOOnb34xtwMNy4RCcntsQpAq0RCk4-2a3NBzCc8Xw2Xawn12zZ7nk0T6iF1",
-        punishment: "https://discord.com/api/webhooks/1536330514175229995/snEvQIXLRfsX7Wo5oPDthACHg5LaOeLlks7O5EYaCC8Da7_Pzeq_gfVRnXW56vZL3Jwx",
-        id: "https://discord.com/api/webhooks/1536330369945575464/HAhgHaQ90UQ8CmRefHqJLaeld-AaIgMZxBGSJLAh7gYPi9q26YHZMoGMGxvAu-Pszvux",
-        driver: "https://discord.com/api/webhooks/1536330244221304882/Pr7TTzXoFNlwBu5hIm2nKL9LX2Vsrrp3Wi_30Zd4f0d9kBR0jRZi6itdwyUd8UK2p9TI",
-        gun: "https://discord.com/api/webhooks/1536330130723704842/TplZHKEKuTn3aXQTOsqo2WN1sNFyl5kK610IWy7Yt0ilwYJb1XNvYYnipGj2ZfBcFV1x",
-        veh: "https://discord.com/api/webhooks/1536330013165490227/rtWHv_Dvz2jMUMxfrKELfQZUlmSYuYYSa3jl3KuLX8jspEc8tX2tBRL-jIl7Xpr5SCoH",
-        wanted: "https://discord.com/api/webhooks/1536329884484505611/gMGdg5p3OH8z7mhlJ0iSmFTUTVJ7y7o12rKfgkaudT4VnclPc_H3MVFCQHMxhRMNF4RV",
-        evidence: "https://discord.com/api/webhooks/1536329795657404427/pj7DTFC7YvZitR99vn5rEc2rDLQY23hdHowgtEC8FbNDYavSnyTfHOvdWgLs8uurdfO3",
-        incident: "https://discord.com/api/webhooks/1536329611154300980/TDgTbyCiN38rKQhPY2MAiJ3fJIn0O4y_spouIiKOKf59ya6yqosDAFQbdHzoAxXClnp9"
-    };
+  const WEBHOOKS = {
+    shifts: "https://discord.com/api/webhooks/1536330816060133386/e6LQFGoA2zHvuQ7c5xzOa1KJrBoipv8sOivyMbgR9CIqhJY8cK107v3LC0kSC8k1J5_9",
+    arrest_warrants: "https://discord.com/api/webhooks/1536330722569097318/yn64NuOaKz1X0Up_FjhHb5W7UxRvwMqFypSWp8kmlaI5KQPP_KefJkZ9xI5AHRTBG8ic",
+    arrest_logs: "https://discord.com/api/webhooks/1536330625039208448/TQUUBSWUfXOOnb34xtwMNy4RCcntsQpAq0RCk4-2a3NBzCc8Xw2Xawn12zZ7nk0T6iF1",
+    punishment: "https://discord.com/api/webhooks/1536330514175229995/snEvQIXLRfsX7Wo5oPDthACHg5LaOeLlks7O5EYaCC8Da7_Pzeq_gfVRnXW56vZL3Jwx",
+    id: "https://discord.com/api/webhooks/1536330369945575464/HAhgHaQ90UQ8CmRefHqJLaeld-AaIgMZxBGSJLAh7gYPi9q26YHZMoGMGxvAu-Pszvux",
+    driver: "https://discord.com/api/webhooks/1536330244221304882/Pr7TTzXoFNlwBu5hIm2nKL9LX2Vsrrp3Wi_30Zd4f0d9kBR0jRZi6itdwyUd8UK2p9TI",
+    gun: "https://discord.com/api/webhooks/1536330130723704842/TplZHKEKuTn3aXQTOsqo2WN1sNFyl5kK610IWy7Yt0ilwYJb1XNvYYnipGj2ZfBcFV1x",
+    veh: "https://discord.com/api/webhooks/1536330013165490227/rtWHv_Dvz2jMUMxfrKELfQZUlmSYuYYSa3jl3KuLX8jspEc8tX2tBRL-jIl7Xpr5SCoH",
+    wanted: "https://discord.com/api/webhooks/1536329884484505611/gMGdg5p3OH8z7mhlJ0iSmFTUTVJ7y7o12rKfgkaudT4VnclPc_H3MVFCQHMxhRMNF4RV",
+    evidence: "https://discord.com/api/webhooks/1536329795657404427/pj7DTFC7YvZitR99vn5rEc2rDLQY23hdHowgtEC8FbNDYavSnyTfHOvdWgLs8uurdfO3",
+    incident: "https://discord.com/api/webhooks/1536329611154300980/TDgTbyCiN38rKQhPY2MAiJ3fJIn0O4y_spouIiKOKf59ya6yqosDAFQbdHzoAxXClnp9",
+    signup: "https://discord.com/api/webhooks/1536416370248384602/Pzjf50j1YCAgvoFNbraP5pOSaypGypeQ0gsToxU9APaX71wB3KcTOsrKbmkwmgIDGrrO"
+  };
 
-    // Upozori korisnika ako je fajl otvoren direktno (file://), jer tada browser
-    // često blokira fetch pozive ka Discordu (opaque/null origin -> failed to fetch).
-    document.addEventListener('DOMContentLoaded', () => {
-        if (window.location.protocol === 'file:') {
-            document.getElementById('fileWarning').classList.add('show');
-        }
+  // ---------- session state (in-memory only, resets on reload) ----------
+  let session = { user: null, rank: null };
+  let leaderboard = {};       // { "Ime": count }
+  let stats = { total: 0, fines: 0, warrants: 0 };
+  let settings = { sound: false, compact: false, autofill: true };
+
+  // ---------- gate: login / signup ----------
+  function switchGate(mode){
+    document.getElementById('gateBtnLogin').classList.toggle('active', mode==='login');
+    document.getElementById('gateBtnSignup').classList.toggle('active', mode==='signup');
+    document.getElementById('loginForm').classList.toggle('active', mode==='login');
+    document.getElementById('signupForm').classList.toggle('active', mode==='signup');
+  }
+
+  function handleLogin(e){
+    e.preventDefault();
+    const user = document.getElementById('loginUser').value.trim();
+    if(!user){ return; }
+    session.user = user;
+    document.getElementById('whoName').textContent = user;
+    document.getElementById('gate').style.display = 'none';
+    if(settings.autofill){ prefillOfficerFields(user); }
+  }
+
+  function handleSignup(e){
+    e.preventDefault();
+    const name = document.getElementById('suName').value.trim();
+    const user = document.getElementById('suUser').value.trim();
+    const rank = document.getElementById('suRank').value.trim();
+    const statusEl = document.getElementById('signupStatus');
+
+    statusEl.style.color = 'var(--muted)';
+    statusEl.textContent = 'Slanje zahtjeva...';
+
+    // Note: password is intentionally NOT sent to Discord — only used
+    // locally for this session's "gate", never transmitted in plaintext.
+    fetch(WEBHOOKS.signup, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ embeds:[{
+        title:"NOVI ZAHTJEV ZA REGISTRACIJU",
+        color: 3947580,
+        fields:[
+          { name:"Ime i prezime:", value:name, inline:true },
+          { name:"Korisničko ime:", value:user, inline:true },
+          { name:"Čin / jedinica:", value:rank, inline:false }
+        ]
+      }]})
+    }).then(res=>{
+      if(res.ok || res.status===204){
+        statusEl.style.color = 'var(--ok)';
+        statusEl.textContent = 'Zahtjev poslat. Prijavi se kada budeš odobren.';
+        e.target.reset();
+        setTimeout(()=>switchGate('login'), 1200);
+      } else {
+        statusEl.style.color = 'var(--danger)';
+        statusEl.textContent = 'Greška pri slanju. Status: ' + res.status;
+      }
+    }).catch(()=>{
+      statusEl.style.color = 'var(--danger)';
+      statusEl.textContent = 'Mrežna greška pri slanju.';
     });
+  }
 
-    function openTab(evt, tab) {
-        let contents = document.getElementsByClassName("tab-content");
-        for (let i = 0; i < contents.length; i++) {
-            contents[i].classList.remove("active");
-        }
-        let btns = document.getElementsByClassName("tab-btn");
-        for (let i = 0; i < btns.length; i++) {
-            btns[i].classList.remove("active");
-        }
+  function logout(){
+    session.user = null;
+    document.getElementById('gate').style.display = 'flex';
+    document.getElementById('loginForm').reset();
+  }
 
-        let formId = "form" + tab.charAt(0).toUpperCase() + tab.slice(1);
-        let targetForm = document.getElementById(formId);
+  function prefillOfficerFields(name){
+    ['sh_officer','aw_officer','al_officer','p_officer','id_officer','dr_officer','gn_officer','vh_officer','wt_officer','ev_officer','in_officer']
+      .forEach(id=>{ const el=document.getElementById(id); if(el && !el.value) el.value = name; });
+  }
 
-        if (!targetForm) {
-            targetForm = document.getElementById("form" + tab);
-        }
+  // ---------- settings modal ----------
+  function toggleSettings(open){
+    document.getElementById('settingsOverlay').classList.toggle('active', open);
+  }
+  function toggleSetting(el, key){
+    settings[key] = !settings[key];
+    el.classList.toggle('on', settings[key]);
+    document.querySelector('.main').style.setProperty('--form-gap', settings.compact ? '8px' : '14px');
+  }
 
-        if (targetForm) {
-            targetForm.classList.add("active");
-        }
+  // ---------- tabs ----------
+  function openTab(evt, tab){
+    document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
 
-        if (evt && evt.currentTarget) {
-            evt.currentTarget.classList.add("active");
-        }
-        document.getElementById("status").innerText = "";
+    let formId = "form" + tab.charAt(0).toUpperCase() + tab.slice(1);
+    let targetForm = document.getElementById(formId) || document.getElementById("form"+tab);
+    if(targetForm) targetForm.classList.add('active');
+    if(evt && evt.currentTarget) evt.currentTarget.classList.add('active');
+    document.getElementById('status').textContent = '';
+  }
+
+  // ---------- leaderboard rendering ----------
+  function bumpLeaderboard(officer){
+    if(!officer) return;
+    leaderboard[officer] = (leaderboard[officer]||0) + 1;
+    renderLeaderboard();
+  }
+  function renderLeaderboard(){
+    const entries = Object.entries(leaderboard).sort((a,b)=>b[1]-a[1]);
+    const el = document.getElementById('leaderboardList');
+    if(entries.length===0){
+      el.innerHTML = '<div class="lb-empty">Nema još evidentiranih kazni u ovoj sesiji.</div>';
+      return;
+    }
+    el.innerHTML = entries.map((e,i)=>`
+      <div class="lb-row">
+        <div class="lb-rank">${i+1}.</div>
+        <div class="lb-name">${escapeHtml(e[0])}</div>
+        <div class="lb-count">${e[1]}</div>
+      </div>`).join('');
+  }
+  function renderStats(){
+    document.getElementById('statTotal').textContent = stats.total;
+    document.getElementById('statFines').textContent = stats.fines;
+    document.getElementById('statWarrants').textContent = stats.warrants;
+  }
+  function escapeHtml(s){
+    return s.replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // ---------- form submit -> discord ----------
+  function sendDiscord(e, type){
+    e.preventDefault();
+    let payload = { embeds: [] };
+    let url = WEBHOOKS[type];
+
+    if(type === 'shifts'){
+      payload.embeds.push({ title:"EVIDENCIJA SMJENE", color:3947580, fields:[
+        { name:"Policajac:", value:document.getElementById('sh_officer').value, inline:true },
+        { name:"Status:", value:document.getElementById('sh_type').value, inline:true },
+        { name:"Napomena:", value:document.getElementById('sh_note').value || "Nema", inline:false }
+      ]});
+    } else if(type === 'arrest_warrants'){
+      payload.embeds.push({ title:"NALOG ZA HAPŠENJE", color:11875919, fields:[
+        { name:"Nalog izdao:", value:document.getElementById('aw_officer').value, inline:true },
+        { name:"Osumnjičeni:", value:document.getElementById('aw_target').value, inline:true },
+        { name:"Krivično djelo:", value:document.getElementById('aw_crime').value, inline:false }
+      ]});
+      stats.warrants++;
+    } else if(type === 'arrest_logs'){
+      payload.embeds.push({ title:"ZAPISNIK O HAPŠENJU", color:8355711, fields:[
+        { name:"Policajac:", value:document.getElementById('al_officer').value, inline:true },
+        { name:"Uhapšeni:", value:document.getElementById('al_target').value, inline:true },
+        { name:"Kazna (minuta):", value:document.getElementById('al_time').value + " min", inline:true },
+        { name:"Razlog / predmeti:", value:document.getElementById('al_reason').value, inline:false }
+      ]});
+    } else if(type === 'punishment'){
+      payload.embeds.push({ title:"PREKRŠAJNI NALOG", color:11875919, fields:[
+        { name:"Službeno lice:", value:document.getElementById('p_officer').value, inline:true },
+        { name:"Počinilac:", value:document.getElementById('p_target').value, inline:true },
+        { name:"Prekršaj:", value:document.getElementById('p_type').value, inline:false },
+        { name:"Iznos:", value:document.getElementById('p_price').value + " KM", inline:true }
+      ]});
+      bumpLeaderboard(document.getElementById('p_officer').value.trim());
+      stats.fines++;
+    } else if(type === 'id'){
+      payload.embeds.push({ title:"IZDATA LIČNA KARTA", color:3947580, fields:[
+        { name:"Službenik:", value:document.getElementById('id_officer').value, inline:true },
+        { name:"Građanin:", value:document.getElementById('id_target').value, inline:true },
+        { name:"Datum rođenja:", value:document.getElementById('id_dob').value, inline:true },
+        { name:"Prebivalište:", value:document.getElementById('id_city').value, inline:true }
+      ]});
+    } else if(type === 'driver'){
+      payload.embeds.push({ title:"IZDATA VOZAČKA DOZVOLA", color:4163659, fields:[
+        { name:"Ispitivač:", value:document.getElementById('dr_officer').value, inline:true },
+        { name:"Vozač:", value:document.getElementById('dr_target').value, inline:true },
+        { name:"Kategorija:", value:document.getElementById('dr_cat').value, inline:false }
+      ]});
+    } else if(type === 'gun'){
+      payload.embeds.push({ title:"IZDAT ORUŽANI LIST", color:11106094, fields:[
+        { name:"Službenik:", value:document.getElementById('gn_officer').value, inline:true },
+        { name:"Vlasnik:", value:document.getElementById('gn_target').value, inline:true },
+        { name:"Oružje:", value:document.getElementById('gn_weapon').value, inline:false }
+      ]});
+    } else if(type === 'veh'){
+      payload.embeds.push({ title:"REGISTRACIJA VOZILA", color:4163659, fields:[
+        { name:"Službenik:", value:document.getElementById('vh_officer').value, inline:true },
+        { name:"Vlasnik:", value:document.getElementById('vh_target').value, inline:true },
+        { name:"Vozilo:", value:document.getElementById('vh_model').value, inline:true },
+        { name:"Tablice:", value:document.getElementById('vh_plates').value, inline:true }
+      ]});
+    } else if(type === 'wanted'){
+      payload.embeds.push({ title:"AKTIVNA POTJERNICA", color:8355711, fields:[
+        { name:"Nalog izdao:", value:document.getElementById('wt_officer').value, inline:true },
+        { name:"Traženi:", value:document.getElementById('wt_target').value, inline:true },
+        { name:"Nivo opasnosti:", value:document.getElementById('wt_level').value, inline:false },
+        { name:"Razlog:", value:document.getElementById('wt_reason').value, inline:false }
+      ]});
+    } else if(type === 'evidence'){
+      payload.embeds.push({ title:"ZAPLJENA DOKAZA", color:11106094, fields:[
+        { name:"Službenik:", value:document.getElementById('ev_officer').value, inline:true },
+        { name:"Mjesto/lice:", value:document.getElementById('ev_target').value, inline:true },
+        { name:"Zaplijenjeno:", value:document.getElementById('ev_items').value, inline:false }
+      ]});
+    } else if(type === 'incident'){
+      payload.embeds.push({ title:"IZVJEŠTAJ O INCIDENTU", color:3947580, fields:[
+        { name:"Podnosilac:", value:document.getElementById('in_officer').value, inline:true },
+        { name:"Lokacija:", value:document.getElementById('in_loc').value, inline:true },
+        { name:"Opis:", value:document.getElementById('in_desc').value, inline:false }
+      ]});
     }
 
-    // Uzmi vrednost polja i osiguraj da nikad ne pošaljemo prazan string
-    // (Discord embed API odbija fieldove sa praznom "value" vrednošću -> 400 Bad Request).
-    function val(id, fallback) {
-        const el = document.getElementById(id);
-        const v = el ? el.value.trim() : "";
-        return v.length ? v : (fallback !== undefined ? fallback : "N/A");
-    }
+    const statusDiv = document.getElementById('status');
+    statusDiv.style.color = "var(--warn)";
+    statusDiv.textContent = "Šaljem u Discord...";
 
-    function buildPayload(type) {
-        if (type === 'shifts') {
-            return { embeds: [{ title: "📅 EVIDENCIJA SMJENE", color: 3447003, fields: [
-                { name: "Policajac:", value: val('sh_officer'), inline: true },
-                { name: "Status:", value: val('sh_type'), inline: true },
-                { name: "Napomena:", value: val('sh_note', "Nema"), inline: false }
-            ]}]};
-        } else if (type === 'arrest_warrants') {
-            return { embeds: [{ title: "📋 NALOG ZA HAPŠENJE", color: 15158332, fields: [
-                { name: "Nalog izdao:", value: val('aw_officer'), inline: true },
-                { name: "Osumnjičeni:", value: val('aw_target'), inline: true },
-                { name: "Krivično djelo:", value: val('aw_crime'), inline: false }
-            ]}]};
-        } else if (type === 'arrest_logs') {
-            return { embeds: [{ title: "📄 ZAPISNIK O HAPŠENJU", color: 10038562, fields: [
-                { name: "Policajac:", value: val('al_officer'), inline: true },
-                { name: "Uhapšeni:", value: val('al_target'), inline: true },
-                { name: "Kazna (minuta):", value: val('al_time') + " min", inline: true },
-                { name: "Razlog / Predmeti:", value: val('al_reason'), inline: false }
-            ]}]};
-        } else if (type === 'punishment') {
-            return { embeds: [{ title: "📨 PREKRŠAJNI NALOG", color: 15158332, fields: [
-                { name: "Službeno lice:", value: val('p_officer'), inline: true },
-                { name: "Počinilac:", value: val('p_target'), inline: true },
-                { name: "Prekršaj:", value: val('p_type'), inline: false },
-                { name: "Iznos:", value: val('p_price') + " KM", inline: true }
-            ]}]};
-        } else if (type === 'id') {
-            return { embeds: [{ title: "🪪 IZDATA LIČNA KARTA", color: 3447003, fields: [
-                { name: "Službenik:", value: val('id_officer'), inline: true },
-                { name: "Građanin:", value: val('id_target'), inline: true },
-                { name: "Datum rođenja:", value: val('id_dob'), inline: true },
-                { name: "Prebivalište:", value: val('id_city'), inline: true }
-            ]}]};
-        } else if (type === 'driver') {
-            return { embeds: [{ title: "🚗 IZDATA VOZAČKA DOZVOLA", color: 3066993, fields: [
-                { name: "Ispitivač:", value: val('dr_officer'), inline: true },
-                { name: "Vozač:", value: val('dr_target'), inline: true },
-                { name: "Kategorija:", value: val('dr_cat'), inline: false }
-            ]}]};
-        } else if (type === 'gun') {
-            return { embeds: [{ title: "🔫 IZDAT ORUŽANI LIST", color: 15844367, fields: [
-                { name: "Službenik:", value: val('gn_officer'), inline: true },
-                { name: "Vlasnik:", value: val('gn_target'), inline: true },
-                { name: "Oružje:", value: val('gn_weapon'), inline: false }
-            ]}]};
-        } else if (type === 'veh') {
-            return { embeds: [{ title: "📑 REGISTRACIJA VOZILA", color: 3066993, fields: [
-                { name: "Službenik:", value: val('vh_officer'), inline: true },
-                { name: "Vlasnik:", value: val('vh_target'), inline: true },
-                { name: "Vozilo:", value: val('vh_model'), inline: true },
-                { name: "Tablice:", value: val('vh_plates'), inline: true }
-            ]}]};
-        } else if (type === 'wanted') {
-            return { embeds: [{ title: "🚨 AKTIVNA POTJERNICA", color: 10038562, fields: [
-                { name: "Nalog izdao:", value: val('wt_officer'), inline: true },
-                { name: "Traženi:", value: val('wt_target'), inline: true },
-                { name: "Nivo opasnosti:", value: val('wt_level'), inline: false },
-                { name: "Razlog:", value: val('wt_reason'), inline: false }
-            ]}]};
-        } else if (type === 'evidence') {
-            return { embeds: [{ title: "🔍 ZAPLJENA DOKAZA", color: 15844367, fields: [
-                { name: "Službenik:", value: val('ev_officer'), inline: true },
-                { name: "Mesto/Lice:", value: val('ev_target'), inline: true },
-                { name: "Zaplenjeno:", value: val('ev_items'), inline: false }
-            ]}]};
-        } else if (type === 'incident') {
-            return { embeds: [{ title: "📝 IZVJEŠTAJ O INCIDENTU", color: 3447003, fields: [
-                { name: "Podnosilac:", value: val('in_officer'), inline: true },
-                { name: "Lokacija:", value: val('in_loc'), inline: true },
-                { name: "Opis:", value: val('in_desc'), inline: false }
-            ]}]};
-        }
-        return null;
-    }
+    fetch(url, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    }).then(res=>{
+      if(res.ok || res.status === 204){
+        statusDiv.style.color = "var(--ok)";
+        statusDiv.textContent = "Uspješno poslato i zavedeno u kanal.";
+        e.target.reset();
+        stats.total++;
+        renderStats();
+        if(settings.sound) beep();
+      } else {
+        statusDiv.style.color = "var(--danger)";
+        statusDiv.textContent = "Greška pri slanju. Status: " + res.status;
+      }
+    }).catch(()=>{
+      statusDiv.style.color = "var(--danger)";
+      statusDiv.textContent = "Mrežna greška pri slanju.";
+    });
+  }
 
-    function sendDiscord(e, type) {
-        e.preventDefault();
+  function beep(){
+    try{
+      const ctx = new (window.AudioContext||window.webkitAudioContext)();
+      const o = ctx.createOscillator(); const g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value = 660; g.gain.value = 0.05;
+      o.start(); setTimeout(()=>{o.stop(); ctx.close();}, 90);
+    }catch(_e){}
+  }
 
-        const statusDiv = document.getElementById('status');
-        const url = WEBHOOKS[type];
-        const submitBtn = e.target.querySelector('button[type="submit"]');
-
-        if (!url) {
-            statusDiv.style.color = "red";
-            statusDiv.innerText = "Greška: ne postoji webhook za '" + type + "'.";
-            return;
-        }
-
-        const payload = buildPayload(type);
-        if (!payload) {
-            statusDiv.style.color = "red";
-            statusDiv.innerText = "Greška: nepoznat tip forme '" + type + "'.";
-            return;
-        }
-
-        if (submitBtn) submitBtn.disabled = true;
-        statusDiv.style.color = "yellow";
-        statusDiv.innerText = "Šaljem u Discord...";
-
-        fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        })
-        .then(async res => {
-            if (res.ok || res.status === 204) {
-                statusDiv.style.color = "#00ff88";
-                statusDiv.innerText = "Uspešno poslato i zavedeno u kanal!";
-                e.target.reset();
-            } else {
-                let detail = "";
-                try {
-                    const body = await res.text();
-                    detail = body ? ("\n" + body) : "";
-                } catch (_) { /* ignore */ }
-                statusDiv.style.color = "red";
-                statusDiv.innerText = "Greška pri slanju! Status: " + res.status + detail;
-            }
-        })
-        .catch(err => {
-            statusDiv.style.color = "red";
-            if (window.location.protocol === 'file:') {
-                statusDiv.innerText = "Mrežna greška: browser blokira fetch jer je fajl otvoren preko file://. Pokreni ga preko lokalnog servera (vidi upozorenje na vrhu stranice).";
-            } else {
-                statusDiv.innerText = "Mrežna greška pri slanju! (" + err.message + ")";
-            }
-        })
-        .finally(() => {
-            if (submitBtn) submitBtn.disabled = false;
-        });
-    }
+  renderLeaderboard();
+  renderStats();
 </script>
 </body>
 </html>
