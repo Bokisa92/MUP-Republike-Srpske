@@ -302,6 +302,13 @@
     <div id="requestsList">
       <div style="font-size:12px;color:var(--muted);">Učitavanje zahtjeva...</div>
     </div>
+
+    <div class="modal-head" style="margin-top:22px;">
+      <h3>Odobreni korisnici</h3>
+    </div>
+    <div id="allUsersList">
+      <div style="font-size:12px;color:var(--muted);">Učitavanje korisnika...</div>
+    </div>
   </div>
 </div>
 
@@ -604,6 +611,7 @@
           if (data.role === 'admin') {
             document.getElementById('adminBtn').style.display = 'inline-block';
             listenForPendingRequests();
+            listenForAllUsers();
           } else {
             document.getElementById('adminBtn').style.display = 'none';
           }
@@ -612,6 +620,11 @@
           alert("Vaš nalog još uvijek nije odobren od strane administratora.");
           signOut(auth);
         }
+      } else {
+        // Auth nalog postoji, ali Firestore profil ne (npr. admin ga je izbrisao).
+        // Ne izlažemo aplikaciju - vraćamo na gate i tražimo ponovnu registraciju.
+        document.getElementById('gate').style.display = 'flex';
+        signOut(auth);
       }
     } else {
       document.getElementById('gate').style.display = 'flex';
@@ -687,6 +700,8 @@
     });
   };
 
+  // Registracija - pokriva i slučaj kad je admin izbrisao korisnika iz Firestore-a
+  // ali Auth nalog (email/lozinka) i dalje postoji, pa treba ponovo napraviti profil.
   window.handleSignup = function(e){
     e.preventDefault();
     const name = document.getElementById('suName').value.trim();
@@ -703,29 +718,58 @@
       await setDoc(doc(db, "users", u.uid), {
         uid: u.uid, name: name, email: email, rank: rank, approved: false, role: "user"
       });
-
-      fetch(WEBHOOKS.signup, {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ embeds:[{
-          title:"⚠️ NOVI ZAHTJEV ZA REGISTRACIJU",
-          color: 16098851,
-          fields:[
-            { name:"Ime i prezime:", value:name, inline:true },
-            { name:"Email:", value:email, inline:true },
-            { name:"Čin / jedinica:", value:rank, inline:false }
-          ]
-        }]})
-      });
-
+      sendSignupWebhook(name, email, rank);
       statusEl.style.color = 'var(--ok)';
       statusEl.textContent = 'Zahtjev poslat! Čeka se odobrenje admina.';
       signOut(auth);
-    }).catch((err) => {
-      statusEl.style.color = 'var(--danger)';
-      statusEl.textContent = 'Greška: ' + err.message;
+    }).catch(async (err) => {
+      if (err.code === 'auth/email-already-in-use') {
+        statusEl.style.color = 'var(--muted)';
+        statusEl.textContent = 'Nalog već postoji, provjera lozinke...';
+        try {
+          const cred = await signInWithEmailAndPassword(auth, email, pass);
+          const u = cred.user;
+          const existing = await getDoc(doc(db, "users", u.uid));
+          if (existing.exists()) {
+            statusEl.style.color = 'var(--warn)';
+            statusEl.textContent = 'Nalog već postoji. Prijavi se umjesto registracije.';
+            signOut(auth);
+            return;
+          }
+          // Firestore profil ne postoji (admin ga je izbrisao) - napravi ga ponovo.
+          await setDoc(doc(db, "users", u.uid), {
+            uid: u.uid, name: name, email: email, rank: rank, approved: false, role: "user"
+          });
+          sendSignupWebhook(name, email, rank);
+          statusEl.style.color = 'var(--ok)';
+          statusEl.textContent = 'Profil ponovo kreiran! Čeka se odobrenje admina.';
+          signOut(auth);
+        } catch (loginErr) {
+          statusEl.style.color = 'var(--danger)';
+          statusEl.textContent = 'Nalog sa ovim emailom već postoji, ali lozinka se ne poklapa. Kontaktiraj admina.';
+        }
+      } else {
+        statusEl.style.color = 'var(--danger)';
+        statusEl.textContent = 'Greška: ' + err.message;
+      }
     });
   };
+
+  function sendSignupWebhook(name, email, rank){
+    fetch(WEBHOOKS.signup, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ embeds:[{
+        title:"⚠️ NOVI ZAHTJEV ZA REGISTRACIJU",
+        color: 16098851,
+        fields:[
+          { name:"Ime i prezime:", value:name, inline:true },
+          { name:"Email:", value:email, inline:true },
+          { name:"Čin / jedinica:", value:rank, inline:false }
+        ]
+      }]})
+    });
+  }
 
   window.logout = function(){ signOut(auth); };
   window.toggleAdminPanel = function(open){ document.getElementById('adminOverlay').classList.toggle('active', open); };
@@ -758,8 +802,48 @@
     });
   }
 
+  // Lista svih odobrenih (approved) korisnika, sa dugmetom za brisanje.
+  function listenForAllUsers(){
+    const q = query(collection(db, "users"), where("approved", "==", true));
+    onSnapshot(q, (snapshot) => {
+      const listEl = document.getElementById('allUsersList');
+      if (snapshot.empty) {
+        listEl.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:10px 0;">Nema odobrenih korisnika.</div>';
+        return;
+      }
+      let html = '';
+      let count = 0;
+      snapshot.forEach((docSnap) => {
+        const u = docSnap.data();
+        if (u.role === 'admin') return; // admine ne prikazujemo za brisanje
+        count++;
+        const safeName = (u.name || '').replace(/'/g, "\\'");
+        html += `
+          <div class="req-card">
+            <div class="req-info">
+              <div>${u.name} (${u.rank || '/'})</div>
+              <small>${u.email}</small>
+            </div>
+            <div class="req-actions">
+              <button class="btn-cancel" onclick="deleteUser('${u.uid}', '${safeName}')">Izbriši</button>
+            </div>
+          </div>
+        `;
+      });
+      listEl.innerHTML = count > 0 ? html : '<div style="font-size:12px;color:var(--muted);padding:10px 0;">Nema odobrenih korisnika.</div>';
+    });
+  }
+
   window.approveUser = async function(uid){ await updateDoc(doc(db, "users", uid), { approved: true }); };
   window.rejectUser = async function(uid){ await deleteDoc(doc(db, "users", uid)); };
+
+  // Briše Firestore profil korisnika. NAPOMENA: ne briše Firebase Authentication nalog
+  // (to zahtijeva Admin SDK / Cloud Function na serveru). Korisnik se ponovnom
+  // registracijom istim emailom/lozinkom vraća u sistem sa novim (approved:false) profilom.
+  window.deleteUser = async function(uid, name){
+    if(!confirm(`Da li sigurno želiš da izbrišeš korisnika ${name}? Ova akcija se ne može poništiti.`)) return;
+    await deleteDoc(doc(db, "users", uid));
+  };
 
   function prefillOfficerFields(name){
     ['sh_officer','aw_officer','al_officer','p_officer','id_officer','dr_officer','gn_officer','vh_officer','wt_officer','ev_officer','in_officer','fb_officer']
