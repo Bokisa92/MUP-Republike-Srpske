@@ -35,17 +35,17 @@
 
     <!-- Meni za izbor forme -->
     <div class="nav-tabs">
-        <button class="tab-btn active" onclick="openTab('shifts')">📅 Smjena</button>
-        <button class="tab-btn" onclick="openTab('arrest_warrants')">📋 Nalog za Hapšenje</button>
-        <button class="tab-btn" onclick="openTab('arrest_logs')">📄 Hapšenje Log</button>
-        <button class="tab-btn" onclick="openTab('punishment')">📨 Kazna</button>
-        <button class="tab-btn" onclick="openTab('id')">🪪 Lična Karta</button>
-        <button class="tab-btn" onclick="openTab('driver')">🚗 Vozačka</button>
-        <button class="tab-btn" onclick="openTab('gun')">🔫 Oružje</button>
-        <button class="tab-btn" onclick="openTab('veh')">📑 Saobraćajna</button>
-        <button class="tab-btn" onclick="openTab('wanted')">🚨 Potjernica</button>
-        <button class="tab-btn" onclick="openTab('evidence')">🔍 Dokazi</button>
-        <button class="tab-btn" onclick="openTab('incident')">📝 Incident</button>
+        <button class="tab-btn active" onclick="openTab(event, 'shifts')">📅 Smjena</button>
+        <button class="tab-btn" onclick="openTab(event, 'arrest_warrants')">📋 Nalog za Hapšenje</button>
+        <button class="tab-btn" onclick="openTab(event, 'arrest_logs')">📄 Hapšenje Log</button>
+        <button class="tab-btn" onclick="openTab(event, 'punishment')">📨 Kazna</button>
+        <button class="tab-btn" onclick="openTab(event, 'id')">🪪 Lična Karta</button>
+        <button class="tab-btn" onclick="openTab(event, 'driver')">🚗 Vozačka</button>
+        <button class="tab-btn" onclick="openTab(event, 'gun')">🔫 Oružje</button>
+        <button class="tab-btn" onclick="openTab(event, 'veh')">📑 Saobraćajna</button>
+        <button class="tab-btn" onclick="openTab(event, 'wanted')">🚨 Potjernica</button>
+        <button class="tab-btn" onclick="openTab(event, 'evidence')">🔍 Dokazi</button>
+        <button class="tab-btn" onclick="openTab(event, 'incident')">📝 Incident</button>
     </div>
 
     <!-- 1. Police Shifts -->
@@ -162,7 +162,6 @@
 </div>
 
 <script>
-    // Webhook baza
     const WEBHOOKS = {
         shifts: "https://discord.com/api/webhooks/1536330816060133386/e6LQFGoA2zHvuQ7c5xzOa1KJrBoipv8sOivyMbgR9CIqhJY8cK107v3LC0kSC8k1J5_9",
         arrest_warrants: "https://discord.com/api/webhooks/1536330722569097318/yn64NuOaKz1X0Up_FjhHb5W7UxRvwMqFypSWp8kmlaI5KQPP_KefJkZ9xI5AHRTBG8ic",
@@ -177,14 +176,18 @@
         incident: "https://discord.com/api/webhooks/1536329611154300980/TDgTbyCiN38rKQhPY2MAiJ3fJIn0O4y_spouIiKOKf59ya6yqosDAFQbdHzoAxXClnp9"
     };
 
-    function openTab(tab) {
+    function openTab(evt, tab) {
         let contents = document.getElementsByClassName("tab-content");
-        for (let i = 0; i < contents.length; i++) { contents[i].classList.remove("active"); }
+        for (let i = 0; i < contents.length; i++) { 
+            contents[i].classList.remove("active"); 
+        }
         let btns = document.getElementsByClassName("tab-btn");
-        for (let i = 0; i < btns.length; i++) { btns[i].classList.remove("active"); }
+        for (let i = 0; i < btns.length; i++) { 
+            btns[i].classList.remove("active"); 
+        }
 
         document.getElementById("form" + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add("active");
-        event.currentTarget.classList.add("active");
+        evt.currentTarget.classList.add("active");
         document.getElementById("status").innerText = "";
     }
 
@@ -276,14 +279,18 @@
             body: JSON.stringify(payload)
         })
         .then(res => {
-            if(res.ok) {
+            if(res.ok || res.status === 204) {
                 statusDiv.style.color = "#00ff88";
                 statusDiv.innerText = "Uspešno poslato i zavedeno u kanal!";
                 e.target.reset();
             } else {
                 statusDiv.style.color = "red";
-                statusDiv.innerText = "Greška pri slanju!";
+                statusDiv.innerText = "Greška pri slanju! Status: " + res.status;
             }
+        })
+        .catch(err => {
+            statusDiv.style.color = "red";
+            statusDiv.innerText = "Mrežna greška ili blokiran zahtjev!";
         });
     }
 </script>
