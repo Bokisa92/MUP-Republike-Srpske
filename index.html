@@ -35,7 +35,6 @@
   }
   ::selection{background:var(--steel);color:#fff;}
 
-  /* ---------- top bar ---------- */
   .topbar{
     display:flex;align-items:center;justify-content:space-between;
     padding:14px 22px;
@@ -74,7 +73,6 @@
   .btn-admin{border-color:var(--warn);color:var(--warn);display:none;}
   .btn-admin:hover{background:var(--warn);color:#fff;}
 
-  /* ---------- layout ---------- */
   .layout{display:flex;max-width:1280px;margin:0 auto;min-height:calc(100vh - 63px);}
   .sidebar{
     width:270px;flex:0 0 auto;border-right:1px solid var(--line);
@@ -110,7 +108,6 @@
   }
   .page-head p{margin:0;font-size:12.5px;color:var(--muted);}
 
-  /* ---------- tabs ---------- */
   .nav-tabs{display:flex;flex-wrap:wrap;gap:0;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;margin-bottom:22px;}
   .tab-btn{
     background:var(--panel);border:none;border-right:1px solid var(--line);
@@ -122,7 +119,6 @@
   .tab-btn:hover{color:var(--white-dim);background:var(--panel-2);}
   .tab-btn.active{background:var(--steel);color:#fff;}
 
-  /* ---------- forms ---------- */
   .card{
     background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
     padding:22px 24px;
@@ -153,7 +149,6 @@
   button.submit-btn:hover{background:transparent;color:var(--white);}
   #status{margin-top:14px;font-size:12px;font-family:'JetBrains Mono',monospace;}
 
-  /* ---------- gate (login/signup) ---------- */
   .gate{
     position:fixed;inset:0;background:var(--bg);z-index:100;
     display:flex;align-items:center;justify-content:center;padding:20px;
@@ -183,7 +178,6 @@
   .gate-form .form-group{margin-bottom:14px;}
   .gate-hint{font-size:10px;color:var(--muted);line-height:1.6;margin-top:14px;border-top:1px solid var(--line-soft);padding-top:12px;}
 
-  /* ---------- admin modal ---------- */
   .modal-overlay{
     position:fixed;inset:0;background:rgba(5,7,10,0.85);z-index:90;
     display:none;align-items:center;justify-content:center;padding:20px;
@@ -221,7 +215,6 @@
 </head>
 <body>
 
-<!-- LOGIN / SIGNUP GATE -->
 <div class="gate" id="gate">
   <div class="gate-card">
     <div class="gate-crest">RS</div>
@@ -273,7 +266,6 @@
   </div>
 </div>
 
-<!-- ADMIN MODAL -->
 <div class="modal-overlay" id="adminOverlay">
   <div class="modal">
     <div class="modal-head">
@@ -286,7 +278,6 @@
   </div>
 </div>
 
-<!-- MAIN APP -->
 <div class="topbar">
   <div class="brand">
     <div class="crest">RS</div>
@@ -312,7 +303,7 @@
       </div>
     </div>
     <div class="side-block">
-      <div class="side-title">Statistika sesije</div>
+      <div class="side-title">Ukupna statistika <span class="tag">TRAJNO</span></div>
       <div class="lb-row"><div class="lb-name">Ukupno obrazaca poslato</div><div class="lb-count" id="statTotal">0</div></div>
       <div class="lb-row"><div class="lb-name">Izdatih kazni</div><div class="lb-count" id="statFines">0</div></div>
       <div class="lb-row" style="border-bottom:none;"><div class="lb-name">Aktivnih naloga</div><div class="lb-count" id="statWarrants">0</div></div>
@@ -503,9 +494,26 @@
   };
 
   let currentUserProfile = null;
-  let stats = { total: 0, fines: 0, warrants: 0 };
 
-  // --- PERSISTENCIJA I PROVERA ODOBRENJA ---
+  // AUTOMATSKA INICIJALIZACIJA STATISTIKE (KREIRA DOKUMENT AKO FALI)
+  async function initStats(){
+    const statRef = doc(db, "stats", "global");
+    const snap = await getDoc(statRef);
+    if (!snap.exists()) {
+      await setDoc(statRef, { total: 0, fines: 0, warrants: 0 });
+    }
+  }
+  initStats();
+
+  onSnapshot(doc(db, "stats", "global"), (docSnap) => {
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      document.getElementById('statTotal').textContent = data.total || 0;
+      document.getElementById('statFines').textContent = data.fines || 0;
+      document.getElementById('statWarrants').textContent = data.warrants || 0;
+    }
+  });
+
   onAuthStateChanged(auth, async (user) => {
     if (user) {
       const userDoc = await getDoc(doc(db, "users", user.uid));
@@ -536,7 +544,6 @@
     }
   });
 
-  // --- TRAJNA RANG LISTA (FIREBASE REALTIME) ---
   onSnapshot(collection(db, "leaderboard"), (snapshot) => {
     let list = [];
     snapshot.forEach((docSnap) => {
@@ -563,7 +570,6 @@
     `).join('');
   });
 
-  // --- LOGIKA PRIJAVE I REGISTRACIJE ---
   window.switchGate = function(mode){
     document.getElementById('gateBtnLogin').classList.toggle('active', mode==='login');
     document.getElementById('gateBtnSignup').classList.toggle('active', mode==='signup');
@@ -632,7 +638,6 @@
 
   window.logout = function(){ signOut(auth); };
 
-  // --- ADMIN PANEL FUNKCIJE ---
   window.toggleAdminPanel = function(open){
     document.getElementById('adminOverlay').classList.toggle('active', open);
   };
@@ -678,7 +683,6 @@
       .forEach(id=>{ const el=document.getElementById(id); if(el && !el.value) el.value = name; });
   }
 
-  // --- NAVIGACIJA TABOVA ---
   window.openTab = function(evt, tab){
     document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
@@ -687,7 +691,6 @@
     evt.currentTarget.classList.add('active');
   };
 
-  // --- SLANJE U DISCORD I FIREBASE UPIS ---
   window.sendDiscord = async function(e, type){
     e.preventDefault();
     const statusEl = document.getElementById('status');
@@ -714,7 +717,6 @@
         { name: "Iznos kazne:", value: document.getElementById('p_price').value + " KM", inline: true }
       ];
 
-      // TRAJNI UPIS U FIREBASE RANG LISTU POMOĆU INCREMENT
       if (officerName) {
         const docId = officerName.toLowerCase().replace(/\s+/g, '_');
         const lbRef = doc(db, "leaderboard", docId);
@@ -724,8 +726,6 @@
         }, { merge: true });
       }
 
-      stats.fines++;
-      document.getElementById('statFines').textContent = stats.fines;
     } else if(type === 'arrest_warrants'){
       embedData.title = "🚨 NALOG ZA HAPŠENJE";
       embedData.color = 11880527;
@@ -734,8 +734,6 @@
         { name: "Osumnjičeni:", value: document.getElementById('aw_target').value, inline: true },
         { name: "Krivično djelo:", value: document.getElementById('aw_crime').value, inline: false }
       ];
-      stats.warrants++;
-      document.getElementById('statWarrants').textContent = stats.warrants;
     } else if(type === 'arrest_logs'){
       embedData.title = "🔒 ZAPISNIK O LIŠENJU SLOBODE";
       embedData.fields = [
@@ -809,8 +807,13 @@
       if(response.ok){
         statusEl.style.color = 'var(--ok)';
         statusEl.textContent = 'Zapisnik uspješno poslat i evidentiran!';
-        stats.total++;
-        document.getElementById('statTotal').textContent = stats.total;
+        
+        let statUpdates = { total: increment(1) };
+        if(type === 'punishment') statUpdates.fines = increment(1);
+        if(type === 'arrest_warrants') statUpdates.warrants = increment(1);
+        
+        await setDoc(doc(db, "stats", "global"), statUpdates, { merge: true });
+
         e.target.reset();
         prefillOfficerFields(currentUserProfile ? currentUserProfile.name : "");
       } else {
