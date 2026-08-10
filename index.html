@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MUP RS - Centralni Portal</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0b192c; color: #ffffff; padding: 15px; margin: 0; }
+        .container { background-color: #1e3e62; padding: 20px; border-radius: 12px; max-width: 650px; margin: auto; box-shadow: 0 5px 20px rgba(0,0,0,0.5); border-top: 6px solid #0056b3; }
+        h2 { text-align: center; margin-top: 0; text-transform: uppercase; letter-spacing: 1px; color: #ffffff; }
+        p.subtitle { text-align: center; font-size: 13px; color: #b0c4de; margin-bottom: 20px; }
+        
+        /* Meni sa dugmićima */
+        .nav-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px; justify-content: center; }
+        .tab-btn { background-color: #000000; border: 1px solid #0056b3; color: #ffffff; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 12px; transition: 0.2s; }
+        .tab-btn.active { background-color: #0056b3; border-color: #0088ff; }
+
+        /* Forme */
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .form-group { margin-bottom: 12px; }
+        label { display: block; margin-bottom: 4px; font-size: 13px; font-weight: bold; color: #d1e8ff; }
+        input, select, textarea { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #0056b3; background-color: #000000; color: #ffffff; box-sizing: border-box; font-size: 14px; }
+        button.submit-btn { width: 100%; padding: 12px; background-color: #0056b3; border: none; border-radius: 6px; color: white; font-size: 15px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        button.submit-btn:hover { background-color: #0088ff; }
+        
+        #status { margin-top: 15px; text-align: center; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>MUP REPUBLIKE SRPSKE</h2>
+    <p class="subtitle">Centralni Informacioni Sistem</p>
+
+    <!-- Meni za izbor forme -->
+    <div class="nav-tabs">
+        <button class="tab-btn active" onclick="openTab('shifts')">📅 Smjena</button>
+        <button class="tab-btn" onclick="openTab('arrest_warrants')">📋 Nalog za Hapšenje</button>
+        <button class="tab-btn" onclick="openTab('arrest_logs')">📄 Hapšenje Log</button>
+        <button class="tab-btn" onclick="openTab('punishment')">📨 Kazna</button>
+        <button class="tab-btn" onclick="openTab('id')">🪪 Lična Karta</button>
+        <button class="tab-btn" onclick="openTab('driver')">🚗 Vozačka</button>
+        <button class="tab-btn" onclick="openTab('gun')">🔫 Oružje</button>
+        <button class="tab-btn" onclick="openTab('veh')">📑 Saobraćajna</button>
+        <button class="tab-btn" onclick="openTab('wanted')">🚨 Potjernica</button>
+        <button class="tab-btn" onclick="openTab('evidence')">🔍 Dokazi</button>
+        <button class="tab-btn" onclick="openTab('incident')">📝 Incident</button>
+    </div>
+
+    <!-- 1. Police Shifts -->
+    <form id="formShifts" class="tab-content active" onsubmit="sendDiscord(event, 'shifts')">
+        <h3>Prijava / Odjava Smjene</h3>
+        <div class="form-group"><label>Ime i službeni broj:</label><input type="text" id="sh_officer" required></div>
+        <div class="form-group"><label>Tip aktivnosti:</label>
+            <select id="sh_type"><option>Početak smjene</option><option>Kraj smjene</option><option>Pauza</option></select>
+        </div>
+        <div class="form-group"><label>Napomena / Partner u patroli:</label><input type="text" id="sh_note"></div>
+        <button type="submit" class="submit-btn">EVIDENTIRAJ SMJENU</button>
+    </form>
+
+    <!-- 2. Arrest Warrants -->
+    <form id="formArrestWarrants" class="tab-content" onsubmit="sendDiscord(event, 'arrest_warrants')">
+        <h3>Nalog za Hapšenje (Arrest Warrant)</h3>
+        <div class="form-group"><label>Nalog izdao (Komesar/Inspektor):</label><input type="text" id="aw_officer" required></div>
+        <div class="form-group"><label>Ime osumnjičenog:</label><input type="text" id="aw_target" required></div>
+        <div class="form-group"><label>Krivično djelo:</label><textarea id="aw_crime" rows="2" required></textarea></div>
+        <button type="submit" class="submit-btn">IZDAJ NALOG ZA HAPŠENJE</button>
+    </form>
+
+    <!-- 3. Arrest Logs -->
+    <form id="formArrestLogs" class="tab-content" onsubmit="sendDiscord(event, 'arrest_logs')">
+        <h3>Zapisnik o Lišenju Slobode</h3>
+        <div class="form-group"><label>Policajac koji je izvršio hapšenje:</label><input type="text" id="al_officer" required></div>
+        <div class="form-group"><label>Uhapšeno lice:</label><input type="text" id="al_target" required></div>
+        <div class="form-group"><label>Trajanje zatvorske kazne (minuta):</label><input type="number" id="al_time" required></div>
+        <div class="form-group"><label>Razlog i oduzeti predmeti:</label><textarea id="al_reason" rows="2" required></textarea></div>
+        <button type="submit" class="submit-btn">PROKNJIŽI HAPŠENJE</button>
+    </form>
+
+    <!-- 4. Punishment Warrants -->
+    <form id="formPunishment" class="tab-content" onsubmit="sendDiscord(event, 'punishment')">
+        <h3>Izdavanje Kazne / Nologa</h3>
+        <div class="form-group"><label>Službeno lice:</label><input type="text" id="p_officer" required></div>
+        <div class="form-group"><label>Počinilac:</label><input type="text" id="p_target" required></div>
+        <div class="form-group"><label>Prekršaj:</label><input type="text" id="p_type" placeholder="npr. Prolazak kroz crveno" required></div>
+        <div class="form-group"><label>Iznos kazne (KM):</label><input type="number" id="p_price" required></div>
+        <button type="submit" class="submit-btn">IZDAJ KAZNU</button>
+    </form>
+
+    <!-- 5. ID Cards -->
+    <form id="formID" class="tab-content" onsubmit="sendDiscord(event, 'id')">
+        <h3>Izdavanje Lične Karte</h3>
+        <div class="form-group"><label>Službenik:</label><input type="text" id="id_officer" required></div>
+        <div class="form-group"><label>Ime i prezime građanina:</label><input type="text" id="id_target" required></div>
+        <div class="form-group"><label>Datum rođenja:</label><input type="text" id="id_dob" placeholder="DD.MM.GGGG" required></div>
+        <div class="form-group"><label>Prebivalište:</label><input type="text" id="id_city" required></div>
+        <button type="submit" class="submit-btn">IZDAJ LIČNU KARTU</button>
+    </form>
+
+    <!-- 6. Driver Licenses -->
+    <form id="formDriver" class="tab-content" onsubmit="sendDiscord(event, 'driver')">
+        <h3>Izdavanje Vozačke Dozvole</h3>
+        <div class="form-group"><label>Ispitivač / Policajac:</label><input type="text" id="dr_officer" required></div>
+        <div class="form-group"><label>Vozač:</label><input type="text" id="dr_target" required></div>
+        <div class="form-group"><label>Kategorija:</label>
+            <select id="dr_cat"><option>B Kategorija</option><option>A Kategorija</option><option>C Kategorija</option><option>Sve kategorije</option></select>
+        </div>
+        <button type="submit" class="submit-btn">IZDAJ VOZAČKU</button>
+    </form>
+
+    <!-- 7. Gun Licenses -->
+    <form id="formGun" class="tab-content" onsubmit="sendDiscord(event, 'gun')">
+        <h3>Izdavanje Dozvole za Oružje</h3>
+        <div class="form-group"><label>Službenik:</label><input type="text" id="gn_officer" required></div>
+        <div class="form-group"><label>Vlasnik oružja:</label><input type="text" id="gn_target" required></div>
+        <div class="form-group"><label>Model oružja i serijski broj:</label><input type="text" id="gn_weapon" required></div>
+        <button type="submit" class="submit-btn">IZDAJ DOZVOLU</button>
+    </form>
+
+    <!-- 8. Vehicle Registration -->
+    <form id="formVeh" class="tab-content" onsubmit="sendDiscord(event, 'veh')">
+        <h3>Registracija Vozila</h3>
+        <div class="form-group"><label>Službenik:</label><input type="text" id="vh_officer" required></div>
+        <div class="form-group"><label>Vlasnik vozila:</label><input type="text" id="vh_target" required></div>
+        <div class="form-group"><label>Marka i model vozila:</label><input type="text" id="vh_model" required></div>
+        <div class="form-group"><label>Registarske tablice:</label><input type="text" id="vh_plates" required></div>
+        <button type="submit" class="submit-btn">REGISTROUJ VOZILO</button>
+    </form>
+
+    <!-- 9. Wanted List -->
+    <form id="formWanted" class="tab-content" onsubmit="sendDiscord(event, 'wanted')">
+        <h3>Raspisivanje Potjernice</h3>
+        <div class="form-group"><label>Nalog izdao:</label><input type="text" id="wt_officer" required></div>
+        <div class="form-group"><label>Traženo lice:</label><input type="text" id="wt_target" required></div>
+        <div class="form-group"><label>Nivo opasnosti:</label>
+            <select id="wt_level"><option>🟢 Nizak rizik</option><option>🟡 Srednji rizik</option><option>🔴 Visok rizik (Naoružan)</option></select>
+        </div>
+        <div class="form-group"><label>Razlog:</label><textarea id="wt_reason" rows="2" required></textarea></div>
+        <button type="submit" class="submit-btn">RASPIŠI POTJERNICU</button>
+    </form>
+
+    <!-- 10. Evidence Logs -->
+    <form id="formEvidence" class="tab-content" onsubmit="sendDiscord(event, 'evidence')">
+        <h3>Zapisnik o Zapljeni Dokaza</h3>
+        <div class="form-group"><label>Inspektor/Policajac:</label><input type="text" id="ev_officer" required></div>
+        <div class="form-group"><label>Lice/Mesto zapljene:</label><input type="text" id="ev_target" required></div>
+        <div class="form-group"><label>Zaplenjeni predmeti / Narkotici / Oružje:</label><textarea id="ev_items" rows="2" required></textarea></div>
+        <button type="submit" class="submit-btn">SAČUVAJ DOKAZE</button>
+    </form>
+
+    <!-- 11. Incident Reports -->
+    <form id="formIncident" class="tab-content" onsubmit="sendDiscord(event, 'incident')">
+        <h3>Izvještaj o Incidentu</h3>
+        <div class="form-group"><label>Izvještaj sastavio:</label><input type="text" id="in_officer" required></div>
+        <div class="form-group"><label>Lokacija incidenta:</label><input type="text" id="in_loc" required></div>
+        <div class="form-group"><label>Detaljan opis događaja:</label><textarea id="in_desc" rows="3" required></textarea></div>
+        <button type="submit" class="submit-btn">POŠALJI IZVJEŠTAJ</button>
+    </form>
+
+    <div id="status"></div>
+</div>
+
+<script>
+    // Webhook baza
+    const WEBHOOKS = {
+        shifts: "https://discord.com/api/webhooks/1536330816060133386/e6LQFGoA2zHvuQ7c5xzOa1KJrBoipv8sOivyMbgR9CIqhJY8cK107v3LC0kSC8k1J5_9",
+        arrest_warrants: "https://discord.com/api/webhooks/1536330722569097318/yn64NuOaKz1X0Up_FjhHb5W7UxRvwMqFypSWp8kmlaI5KQPP_KefJkZ9xI5AHRTBG8ic",
+        arrest_logs: "https://discord.com/api/webhooks/1536330625039208448/TQUUBSWUfXOOnb34xtwMNy4RCcntsQpAq0RCk4-2a3NBzCc8Xw2Xawn12zZ7nk0T6iF1",
+        punishment: "https://discord.com/api/webhooks/1536330514175229995/snEvQIXLRfsX7Wo5oPDthACHg5LaOeLlks7O5EYaCC8Da7_Pzeq_gfVRnXW56vZL3Jwx",
+        id: "https://discord.com/api/webhooks/1536330369945575464/HAhgHaQ90UQ8CmRefHqJLaeld-AaIgMZxBGSJLAh7gYPi9q26YHZMoGMGxvAu-Pszvux",
+        driver: "https://discord.com/api/webhooks/1536330244221304882/Pr7TTzXoFNlwBu5hIm2nKL9LX2Vsrrp3Wi_30Zd4f0d9kBR0jRZi6itdwyUd8UK2p9TI",
+        gun: "https://discord.com/api/webhooks/1536330130723704842/TplZHKEKuTn3aXQTOsqo2WN1sNFyl5kK610IWy7Yt0ilwYJb1XNvYYnipGj2ZfBcFV1x",
+        veh: "https://discord.com/api/webhooks/1536330013165490227/rtWHv_Dvz2jMUMxfrKELfQZUlmSYuYYSa3jl3KuLX8jspEc8tX2tBRL-jIl7Xpr5SCoH",
+        wanted: "https://discord.com/api/webhooks/1536329884484505611/gMGdg5p3OH8z7mhlJ0iSmFTUTVJ7y7o12rKfgkaudT4VnclPc_H3MVFCQHMxhRMNF4RV",
+        evidence: "https://discord.com/api/webhooks/1536329795657404427/pj7DTFC7YvZitR99vn5rEc2rDLQY23hdHowgtEC8FbNDYavSnyTfHOvdWgLs8uurdfO3",
+        incident: "https://discord.com/api/webhooks/1536329611154300980/TDgTbyCiN38rKQhPY2MAiJ3fJIn0O4y_spouIiKOKf59ya6yqosDAFQbdHzoAxXClnp9"
+    };
+
+    function openTab(tab) {
+        let contents = document.getElementsByClassName("tab-content");
+        for (let i = 0; i < contents.length; i++) { contents[i].classList.remove("active"); }
+        let btns = document.getElementsByClassName("tab-btn");
+        for (let i = 0; i < btns.length; i++) { btns[i].classList.remove("active"); }
+
+        document.getElementById("form" + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add("active");
+        event.currentTarget.classList.add("active");
+        document.getElementById("status").innerText = "";
+    }
+
+    function sendDiscord(e, type) {
+        e.preventDefault();
+        let payload = { embeds: [] };
+        let url = WEBHOOKS[type];
+
+        if(type === 'shifts') {
+            payload.embeds.push({ title: "📅 EVIDENCIJA SMJENE", color: 3447003, fields: [
+                { name: "Policajac:", value: document.getElementById('sh_officer').value, inline: true },
+                { name: "Status:", value: document.getElementById('sh_type').value, inline: true },
+                { name: "Napomena:", value: document.getElementById('sh_note').value || "Nema", inline: false }
+            ]});
+        } else if(type === 'arrest_warrants') {
+            payload.embeds.push({ title: "📋 NALOG ZA HAPŠENJE", color: 15158332, fields: [
+                { name: "Nalog izdao:", value: document.getElementById('aw_officer').value, inline: true },
+                { name: "Osumnjičeni:", value: document.getElementById('aw_target').value, inline: true },
+                { name: "Krivično djelo:", value: document.getElementById('aw_crime').value, inline: false }
+            ]});
+        } else if(type === 'arrest_logs') {
+            payload.embeds.push({ title: "📄 ZAPISNIK O HAPŠENJU", color: 10038562, fields: [
+                { name: "Policajac:", value: document.getElementById('al_officer').value, inline: true },
+                { name: "Uhapšeni:", value: document.getElementById('al_target').value, inline: true },
+                { name: "Kazna (minuta):", value: document.getElementById('al_time').value + " min", inline: true },
+                { name: "Razlog / Predmeti:", value: document.getElementById('al_reason').value, inline: false }
+            ]});
+        } else if(type === 'punishment') {
+            payload.embeds.push({ title: "📨 PREKRŠAJNI NALOG", color: 15158332, fields: [
+                { name: "Službeno lice:", value: document.getElementById('p_officer').value, inline: true },
+                { name: "Počinilac:", value: document.getElementById('p_target').value, inline: true },
+                { name: "Prekršaj:", value: document.getElementById('p_type').value, inline: false },
+                { name: "Iznos:", value: document.getElementById('p_price').value + " KM", inline: true }
+            ]});
+        } else if(type === 'id') {
+            payload.embeds.push({ title: "🪪 IZDATA LIČNA KARTA", color: 3447003, fields: [
+                { name: "Službenik:", value: document.getElementById('id_officer').value, inline: true },
+                { name: "Građanin:", value: document.getElementById('id_target').value, inline: true },
+                { name: "Datum rođenja:", value: document.getElementById('id_dob').value, inline: true },
+                { name: "Prebivalište:", value: document.getElementById('id_city').value, inline: true }
+            ]});
+        } else if(type === 'driver') {
+            payload.embeds.push({ title: "🚗 IZDATA VOZAČKA DOZVOLA", color: 3066993, fields: [
+                { name: "Ispitivač:", value: document.getElementById('dr_officer').value, inline: true },
+                { name: "Vozač:", value: document.getElementById('dr_target').value, inline: true },
+                { name: "Kategorija:", value: document.getElementById('dr_cat').value, inline: false }
+            ]});
+        } else if(type === 'gun') {
+            payload.embeds.push({ title: "🔫 IZDAT ORUŽANI LIST", color: 15844367, fields: [
+                { name: "Službenik:", value: document.getElementById('gn_officer').value, inline: true },
+                { name: "Vlasnik:", value: document.getElementById('gn_target').value, inline: true },
+                { name: "Oružje:", value: document.getElementById('gn_weapon').value, inline: false }
+            ]});
+        } else if(type === 'veh') {
+            payload.embeds.push({ title: "📑 REGISTRACIJA VOZILA", color: 3066993, fields: [
+                { name: "Službenik:", value: document.getElementById('vh_officer').value, inline: true },
+                { name: "Vlasnik:", value: document.getElementById('vh_target').value, inline: true },
+                { name: "Vozilo:", value: document.getElementById('vh_model').value, inline: true },
+                { name: "Tablice:", value: document.getElementById('vh_plates').value, inline: true }
+            ]});
+        } else if(type === 'wanted') {
+            payload.embeds.push({ title: "🚨 AKTIVNA POTJERNICA", color: 10038562, fields: [
+                { name: "Nalog izdao:", value: document.getElementById('wt_officer').value, inline: true },
+                { name: "Traženi:", value: document.getElementById('wt_target').value, inline: true },
+                { name: "Nivo opasnosti:", value: document.getElementById('wt_level').value, inline: false },
+                { name: "Razlog:", value: document.getElementById('wt_reason').value, inline: false }
+            ]});
+        } else if(type === 'evidence') {
+            payload.embeds.push({ title: "🔍 ZAPLJENA DOKAZA", color: 15844367, fields: [
+                { name: "Službenik:", value: document.getElementById('ev_officer').value, inline: true },
+                { name: "Mesto/Lice:", value: document.getElementById('ev_target').value, inline: true },
+                { name: "Zaplenjeno:", value: document.getElementById('ev_items').value, inline: false }
+            ]});
+        } else if(type === 'incident') {
+            payload.embeds.push({ title: "📝 IZVJEŠTAJ O INCIDENTU", color: 3447003, fields: [
+                { name: "Podnosilac:", value: document.getElementById('in_officer').value, inline: true },
+                { name: "Lokacija:", value: document.getElementById('in_loc').value, inline: true },
+                { name: "Opis:", value: document.getElementById('in_desc').value, inline: false }
+            ]});
+        }
+
+        const statusDiv = document.getElementById('status');
+        statusDiv.style.color = "yellow";
+        statusDiv.innerText = "Šaljem u Discord...";
+
+        fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(res => {
+            if(res.ok) {
+                statusDiv.style.color = "#00ff88";
+                statusDiv.innerText = "Uspešno poslato i zavedeno u kanal!";
+                e.target.reset();
+            } else {
+                statusDiv.style.color = "red";
+                statusDiv.innerText = "Greška pri slanju!";
+            }
+        });
+    }
+</script>
+</body>
+</html>
