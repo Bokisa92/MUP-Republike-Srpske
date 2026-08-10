@@ -71,6 +71,8 @@
     cursor:pointer;font-family:'Inter',sans-serif;text-transform:uppercase;
   }
   .btn-ghost:hover{border-color:var(--white-dim);color:var(--white);}
+  .btn-admin{border-color:var(--warn);color:var(--warn);display:none;}
+  .btn-admin:hover{background:var(--warn);color:#fff;}
 
   /* ---------- layout ---------- */
   .layout{display:flex;max-width:1280px;margin:0 auto;min-height:calc(100vh - 63px);}
@@ -182,33 +184,29 @@
   .gate-form .form-group{margin-bottom:14px;}
   .gate-hint{font-size:10px;color:var(--muted);line-height:1.6;margin-top:14px;border-top:1px solid var(--line-soft);padding-top:12px;}
 
-  /* ---------- settings modal ---------- */
+  /* ---------- admin modal ---------- */
   .modal-overlay{
-    position:fixed;inset:0;background:rgba(5,7,10,0.75);z-index:90;
+    position:fixed;inset:0;background:rgba(5,7,10,0.85);z-index:90;
     display:none;align-items:center;justify-content:center;padding:20px;
   }
   .modal-overlay.active{display:flex;}
   .modal{
-    width:100%;max-width:420px;background:var(--panel);border:1px solid var(--line);
+    width:100%;max-width:550px;background:var(--panel);border:1px solid var(--line);
     border-radius:var(--radius);padding:24px 26px;
   }
   .modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid var(--line);}
   .modal-head h3{margin:0;font-family:'Oswald',sans-serif;font-size:13px;letter-spacing:1.5px;color:var(--white);text-transform:uppercase;}
   .modal-close{background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;}
-  .setting-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line-soft);}
-  .setting-row:last-child{border-bottom:none;}
-  .setting-label{font-size:12.5px;color:var(--white-dim);}
-  .setting-label small{display:block;font-size:10.5px;color:var(--muted);margin-top:2px;}
-  .toggle{
-    width:38px;height:20px;border-radius:20px;background:var(--bg);border:1px solid var(--line);
-    position:relative;cursor:pointer;flex:0 0 auto;
+  
+  .req-card{
+    background:var(--bg);border:1px solid var(--line);padding:12px;margin-bottom:10px;
+    border-radius:var(--radius);display:flex;align-items:center;justify-content:space-between;
   }
-  .toggle::after{
-    content:'';position:absolute;top:1px;left:1px;width:16px;height:16px;border-radius:50%;
-    background:var(--muted);transition:0.15s;
-  }
-  .toggle.on{background:var(--steel);border-color:var(--steel);}
-  .toggle.on::after{left:19px;background:#fff;}
+  .req-info div{font-size:13px;color:var(--white);font-weight:600;}
+  .req-info small{font-size:11px;color:var(--muted);display:block;}
+  .req-actions{display:flex;gap:8px;}
+  .btn-accept{background:var(--ok);border:none;color:#fff;padding:6px 12px;border-radius:var(--radius);cursor:pointer;font-size:11px;font-weight:600;}
+  .btn-cancel{background:var(--danger);border:none;color:#fff;padding:6px 12px;border-radius:var(--radius);cursor:pointer;font-size:11px;font-weight:600;}
 
   footer{
     text-align:center;padding:16px;font-size:10px;color:var(--muted);
@@ -224,7 +222,7 @@
 </head>
 <body>
 
-<!-- ================= LOGIN / SIGNUP GATE ================= -->
+<!-- LOGIN / SIGNUP GATE -->
 <div class="gate" id="gate">
   <div class="gate-card">
     <div class="gate-crest">RS</div>
@@ -238,8 +236,8 @@
 
     <form id="loginForm" class="gate-form active" onsubmit="handleLogin(event)">
       <div class="form-group">
-        <label>Korisničko ime</label>
-        <input type="text" id="loginUser" required>
+        <label>Email korisnika</label>
+        <input type="email" id="loginUser" placeholder="unesite email..." required>
       </div>
       <div class="form-group">
         <label>Lozinka</label>
@@ -255,8 +253,8 @@
         <input type="text" id="suName" required>
       </div>
       <div class="form-group">
-        <label>Korisničko ime</label>
-        <input type="text" id="suUser" required>
+        <label>Email adresa</label>
+        <input type="email" id="suUser" required>
       </div>
       <div class="form-group">
         <label>Čin / Jedinica</label>
@@ -266,40 +264,30 @@
         <label>Lozinka</label>
         <input type="password" id="suPass" required>
       </div>
-      <button type="submit" class="submit-btn" style="width:100%;">Pošalji zahtjev za registraciju</button>
+      <button type="submit" class="submit-btn" style="width:100%;">Registruj se</button>
       <div id="signupStatus" style="font-size:11.5px;font-family:'JetBrains Mono',monospace;margin-top:10px;"></div>
     </form>
 
     <div class="gate-hint">
-      Ovo je statička stranica bez servera — prijava služi za identifikaciju u sistemu, ne kao bezbjednosna zaštita. Ne koristi ovdje lozinku koju koristiš na drugim mjestima.
+      Registrovani nalozi zahtijevaju odobrenje administratora prije prvog pristupa sistemu.
     </div>
   </div>
 </div>
 
-<!-- ================= SETTINGS MODAL ================= -->
-<div class="modal-overlay" id="settingsOverlay">
+<!-- ADMIN MODAL -->
+<div class="modal-overlay" id="adminOverlay">
   <div class="modal">
     <div class="modal-head">
-      <h3>Podešavanja</h3>
-      <button class="modal-close" onclick="toggleSettings(false)">✕</button>
+      <h3>Admin Panel — Zahtjevi za pristup</h3>
+      <button class="modal-close" onclick="toggleAdminPanel(false)">✕</button>
     </div>
-    <div class="setting-row">
-      <div class="setting-label">Zvučna obavještenja<small>Zvuk pri uspješnom slanju obrasca</small></div>
-      <div class="toggle" id="toggleSound" onclick="toggleSetting(this,'sound')"></div>
+    <div id="requestsList">
+      <div style="font-size:12px;color:var(--muted);">Učitavanje zahtjeva...</div>
     </div>
-    <div class="setting-row">
-      <div class="setting-label">Kompaktan prikaz<small>Manji razmak između polja u obrascima</small></div>
-      <div class="toggle" id="toggleCompact" onclick="toggleSetting(this,'compact')"></div>
-    </div>
-    <div class="setting-row">
-      <div class="setting-label">Automatsko popunjavanje<small>Upamti ime službenika u ovoj sesiji</small></div>
-      <div class="toggle on" id="toggleAutofill" onclick="toggleSetting(this,'autofill')"></div>
-    </div>
-    <div class="gate-hint">Podešavanja se čuvaju samo tokom trenutne sesije (do zatvaranja stranice).</div>
   </div>
 </div>
 
-<!-- ================= APP ================= -->
+<!-- MAIN APP -->
 <div class="topbar">
   <div class="brand">
     <div class="crest">RS</div>
@@ -311,7 +299,7 @@
   <div class="topbar-right">
     <div class="status-pill"><span class="status-dot"></span>SISTEM AKTIVAN</div>
     <div class="who">Prijavljen: <b id="whoName">—</b></div>
-    <button class="btn-ghost" onclick="toggleSettings(true)">Podešavanja</button>
+    <button class="btn-ghost btn-admin" id="adminBtn" onclick="toggleAdminPanel(true)">Admin Panel</button>
     <button class="btn-ghost" onclick="logout()">Odjava</button>
   </div>
 </div>
@@ -319,11 +307,10 @@
 <div class="layout">
   <div class="sidebar">
     <div class="side-block">
-      <div class="side-title">Rang lista <span class="tag">SESIJA</span></div>
+      <div class="side-title">Rang lista <span class="tag">UŽIVO</span></div>
       <div id="leaderboardList">
-        <div class="lb-empty">Nema još evidentiranih kazni u ovoj sesiji.</div>
+        <div class="lb-empty">Učitavanje rang liste...</div>
       </div>
-      <div class="side-note">Broji se od otvaranja stranice — ne čuva se trajno bez servera.</div>
     </div>
     <div class="side-block">
       <div class="side-title">Statistika sesije</div>
@@ -482,7 +469,25 @@
 
 <footer>MUP RS — Centralni informacioni sistem &middot; Interna upotreba</footer>
 
-<script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+  import { getFirestore, doc, setDoc, getDoc, deleteDoc, updateDoc, collection, onSnapshot, query, where, increment } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBt-aqHyhvXOfJmTRvN5LRAwiguaY1wek0",
+    authDomain: "mup-r-srpske.firebaseapp.com",
+    projectId: "mup-r-srpske",
+    storageBucket: "mup-r-srpske.firebasestorage.app",
+    messagingSenderId: "677115759538",
+    appId: "1:677115759538:web:567e42a146a517945532ab",
+    measurementId: "G-T3JFMBGJQ7"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
   const WEBHOOKS = {
     shifts: "https://discord.com/api/webhooks/1536330816060133386/e6LQFGoA2zHvuQ7c5xzOa1KJrBoipv8sOivyMbgR9CIqhJY8cK107v3LC0kSC8k1J5_9",
     arrest_warrants: "https://discord.com/api/webhooks/1536330722569097318/yn64NuOaKz1X0Up_FjhHb5W7UxRvwMqFypSWp8kmlaI5KQPP_KefJkZ9xI5AHRTBG8ic",
@@ -498,137 +503,198 @@
     signup: "https://discord.com/api/webhooks/1536416370248384602/Pzjf50j1YCAgvoFNbraP5pOSaypGypeQ0gsToxU9APaX71wB3KcTOsrKbmkwmgIDGrrO"
   };
 
-  // ---------- session state (in-memory only, resets on reload) ----------
-  let session = { user: null, rank: null };
-  let leaderboard = {};       // { "Ime": count }
+  let currentUserProfile = null;
   let stats = { total: 0, fines: 0, warrants: 0 };
-  let settings = { sound: false, compact: false, autofill: true };
 
-  // ---------- gate: login / signup ----------
-  function switchGate(mode){
+  // --- PERSISTENCIJA I LOGIKA PROVERE ODOBRENJA ---
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      const userDoc = await getDoc(doc(db, "users", user.uid));
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        if (data.approved === true) {
+          currentUserProfile = data;
+          document.getElementById('whoName').textContent = data.name || user.email;
+          document.getElementById('gate').style.display = 'none';
+
+          // Provera da li je Admin
+          if (data.role === 'admin') {
+            document.getElementById('adminBtn').style.display = 'inline-block';
+            listenForPendingRequests();
+          } else {
+            document.getElementById('adminBtn').style.display = 'none';
+          }
+          prefillOfficerFields(data.name);
+        } else {
+          alert("Vaš nalog još uvijek nije odobren od strane administratora.");
+          signOut(auth);
+        }
+      }
+    } else {
+      currentUserProfile = null;
+      document.getElementById('gate').style.display = 'flex';
+      document.getElementById('whoName').textContent = '—';
+      document.getElementById('adminBtn').style.display = 'none';
+    }
+  });
+
+  // --- FIREBASE RANG LISTA ---
+  onSnapshot(collection(db, "leaderboard"), (snapshot) => {
+    let list = [];
+    snapshot.forEach((doc) => list.push(doc.data()));
+    list.sort((a, b) => b.count - a.count);
+    const el = document.getElementById('leaderboardList');
+    if(list.length === 0){
+      el.innerHTML = '<div class="lb-empty">Nema još evidentiranih kazni.</div>';
+      return;
+    }
+    el.innerHTML = list.map((e,i)=>`
+      <div class="lb-row">
+        <div class="lb-rank">${i+1}.</div>
+        <div class="lb-name">${e.name}</div>
+        <div class="lb-count">${e.count}</div>
+      </div>`).join('');
+  });
+
+  // --- PRIJAVA / REGISTRACIJA ---
+  window.switchGate = function(mode){
     document.getElementById('gateBtnLogin').classList.toggle('active', mode==='login');
     document.getElementById('gateBtnSignup').classList.toggle('active', mode==='signup');
     document.getElementById('loginForm').classList.toggle('active', mode==='login');
     document.getElementById('signupForm').classList.toggle('active', mode==='signup');
-  }
+  };
 
-  function handleLogin(e){
+  window.handleLogin = function(e){
     e.preventDefault();
-    const user = document.getElementById('loginUser').value.trim();
-    if(!user){ return; }
-    session.user = user;
-    document.getElementById('whoName').textContent = user;
-    document.getElementById('gate').style.display = 'none';
-    if(settings.autofill){ prefillOfficerFields(user); }
-  }
+    const email = document.getElementById('loginUser').value.trim();
+    const pass = document.getElementById('loginPass').value.trim();
+    const statusEl = document.getElementById('loginStatus');
+    statusEl.style.color = 'var(--muted)';
+    statusEl.textContent = 'Provera podataka...';
 
-  function handleSignup(e){
+    signInWithEmailAndPassword(auth, email, pass).catch((err) => {
+      statusEl.style.color = 'var(--danger)';
+      statusEl.textContent = 'Greška: ' + err.message;
+    });
+  };
+
+  window.handleSignup = function(e){
     e.preventDefault();
     const name = document.getElementById('suName').value.trim();
-    const user = document.getElementById('suUser').value.trim();
+    const email = document.getElementById('suUser').value.trim();
     const rank = document.getElementById('suRank').value.trim();
+    const pass = document.getElementById('suPass').value.trim();
     const statusEl = document.getElementById('signupStatus');
 
     statusEl.style.color = 'var(--muted)';
     statusEl.textContent = 'Slanje zahtjeva...';
 
-    // Note: password is intentionally NOT sent to Discord — only used
-    // locally for this session's "gate", never transmitted in plaintext.
-    fetch(WEBHOOKS.signup, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ embeds:[{
-        title:"NOVI ZAHTJEV ZA REGISTRACIJU",
-        color: 3947580,
-        fields:[
-          { name:"Ime i prezime:", value:name, inline:true },
-          { name:"Korisničko ime:", value:user, inline:true },
-          { name:"Čin / jedinica:", value:rank, inline:false }
-        ]
-      }]})
-    }).then(res=>{
-      if(res.ok || res.status===204){
-        statusEl.style.color = 'var(--ok)';
-        statusEl.textContent = 'Zahtjev poslat. Prijavi se kada budeš odobren.';
-        e.target.reset();
-        setTimeout(()=>switchGate('login'), 1200);
-      } else {
-        statusEl.style.color = 'var(--danger)';
-        statusEl.textContent = 'Greška pri slanju. Status: ' + res.status;
-      }
-    }).catch(()=>{
+    createUserWithEmailAndPassword(auth, email, pass).then(async (userCredential) => {
+      const u = userCredential.user;
+      await setDoc(doc(db, "users", u.uid), {
+        uid: u.uid,
+        name: name,
+        email: email,
+        rank: rank,
+        approved: false, // Čeka odobrenje admina
+        role: "user"
+      });
+
+      // Slanje i u Discord čisto radi obaveštenja
+      fetch(WEBHOOKS.signup, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ embeds:[{
+          title:"⚠️ NOVI ZAHTJEV ZA REGISTRACIJU",
+          color: 16098851,
+          fields:[
+            { name:"Ime i prezime:", value:name, inline:true },
+            { name:"Email:", value:email, inline:true },
+            { name:"Čin / jedinica:", value:rank, inline:false }
+          ]
+        }]})
+      });
+
+      statusEl.style.color = 'var(--ok)';
+      statusEl.textContent = 'Zahtjev poslat! Čeka se odobrenje admina.';
+      signOut(auth);
+    }).catch((err) => {
       statusEl.style.color = 'var(--danger)';
-      statusEl.textContent = 'Mrežna greška pri slanju.';
+      statusEl.textContent = 'Greška: ' + err.message;
+    });
+  };
+
+  window.logout = function(){ signOut(auth); };
+
+  // --- ADMIN PANEL FUNKCIJE ---
+  window.toggleAdminPanel = function(open){
+    document.getElementById('adminOverlay').classList.toggle('active', open);
+  };
+
+  function listenForPendingRequests(){
+    const q = query(collection(db, "users"), where("approved", "==", false));
+    onSnapshot(q, (snapshot) => {
+      const listEl = document.getElementById('requestsList');
+      if (snapshot.empty) {
+        listEl.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:10px 0;">Nema zahtjeva na čekanju.</div>';
+        return;
+      }
+      let html = '';
+      snapshot.forEach((docSnap) => {
+        const u = docSnap.data();
+        html += `
+          <div class="req-card">
+            <div class="req-info">
+              <div>${u.name} (${u.rank})</div>
+              <small>${u.email}</small>
+            </div>
+            <div class="req-actions">
+              <button class="btn-accept" onclick="approveUser('${u.uid}')">Prihvati</button>
+              <button class="btn-cancel" onclick="rejectUser('${u.uid}')">Odbij</button>
+            </div>
+          </div>
+        `;
+      });
+      listEl.innerHTML = html;
     });
   }
 
-  function logout(){
-    session.user = null;
-    document.getElementById('gate').style.display = 'flex';
-    document.getElementById('loginForm').reset();
-  }
+  window.approveUser = async function(uid){
+    await updateDoc(doc(db, "users", uid), { approved: true });
+  };
+
+  window.rejectUser = async function(uid){
+    await deleteDoc(doc(db, "users", uid));
+  };
 
   function prefillOfficerFields(name){
     ['sh_officer','aw_officer','al_officer','p_officer','id_officer','dr_officer','gn_officer','vh_officer','wt_officer','ev_officer','in_officer']
       .forEach(id=>{ const el=document.getElementById(id); if(el && !el.value) el.value = name; });
   }
 
-  // ---------- settings modal ----------
-  function toggleSettings(open){
-    document.getElementById('settingsOverlay').classList.toggle('active', open);
-  }
-  function toggleSetting(el, key){
-    settings[key] = !settings[key];
-    el.classList.toggle('on', settings[key]);
-    document.querySelector('.main').style.setProperty('--form-gap', settings.compact ? '8px' : '14px');
-  }
-
-  // ---------- tabs ----------
-  function openTab(evt, tab){
+  // --- TAVOVI I OBRASCI ---
+  window.openTab = function(evt, tab){
     document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-
     let formId = "form" + tab.charAt(0).toUpperCase() + tab.slice(1);
     let targetForm = document.getElementById(formId) || document.getElementById("form"+tab);
     if(targetForm) targetForm.classList.add('active');
     if(evt && evt.currentTarget) evt.currentTarget.classList.add('active');
-    document.getElementById('status').textContent = '';
-  }
+  };
 
-  // ---------- leaderboard rendering ----------
-  function bumpLeaderboard(officer){
+  async function bumpLeaderboard(officer){
     if(!officer) return;
-    leaderboard[officer] = (leaderboard[officer]||0) + 1;
-    renderLeaderboard();
-  }
-  function renderLeaderboard(){
-    const entries = Object.entries(leaderboard).sort((a,b)=>b[1]-a[1]);
-    const el = document.getElementById('leaderboardList');
-    if(entries.length===0){
-      el.innerHTML = '<div class="lb-empty">Nema još evidentiranih kazni u ovoj sesiji.</div>';
-      return;
-    }
-    el.innerHTML = entries.map((e,i)=>`
-      <div class="lb-row">
-        <div class="lb-rank">${i+1}.</div>
-        <div class="lb-name">${escapeHtml(e[0])}</div>
-        <div class="lb-count">${e[1]}</div>
-      </div>`).join('');
-  }
-  function renderStats(){
-    document.getElementById('statTotal').textContent = stats.total;
-    document.getElementById('statFines').textContent = stats.fines;
-    document.getElementById('statWarrants').textContent = stats.warrants;
-  }
-  function escapeHtml(s){
-    return s.replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const docId = officer.toLowerCase().replace(/\s+/g, '_');
+    await setDoc(doc(db, "leaderboard", docId), { name: officer, count: increment(1) }, { merge: true });
   }
 
-  // ---------- form submit -> discord ----------
-  function sendDiscord(e, type){
+  window.sendDiscord = function(e, type){
     e.preventDefault();
     let payload = { embeds: [] };
     let url = WEBHOOKS[type];
+    let statusEl = document.getElementById('status');
+    statusEl.style.color = 'var(--muted)';
+    statusEl.textContent = 'Slanje...';
 
     if(type === 'shifts'){
       payload.embeds.push({ title:"EVIDENCIJA SMJENE", color:3947580, fields:[
@@ -647,103 +713,85 @@
       payload.embeds.push({ title:"ZAPISNIK O HAPŠENJU", color:8355711, fields:[
         { name:"Policajac:", value:document.getElementById('al_officer').value, inline:true },
         { name:"Uhapšeni:", value:document.getElementById('al_target').value, inline:true },
-        { name:"Kazna (minuta):", value:document.getElementById('al_time').value + " min", inline:true },
-        { name:"Razlog / predmeti:", value:document.getElementById('al_reason').value, inline:false }
+        { name:"Trajanje:", value:document.getElementById('al_time').value + " min", inline:true },
+        { name:"Razlog:", value:document.getElementById('al_reason').value, inline:false }
       ]});
     } else if(type === 'punishment'){
-      payload.embeds.push({ title:"PREKRŠAJNI NALOG", color:11875919, fields:[
-        { name:"Službeno lice:", value:document.getElementById('p_officer').value, inline:true },
+      const officer = document.getElementById('p_officer').value;
+      payload.embeds.push({ title:"IZDATA KAZNA", color:11094095, fields:[
+        { name:"Službenik:", value:officer, inline:true },
         { name:"Počinilac:", value:document.getElementById('p_target').value, inline:true },
-        { name:"Prekršaj:", value:document.getElementById('p_type').value, inline:false },
+        { name:"Prekršaj:", value:document.getElementById('p_type').value, inline:true },
         { name:"Iznos:", value:document.getElementById('p_price').value + " KM", inline:true }
       ]});
-      bumpLeaderboard(document.getElementById('p_officer').value.trim());
       stats.fines++;
+      bumpLeaderboard(officer);
     } else if(type === 'id'){
-      payload.embeds.push({ title:"IZDATA LIČNA KARTA", color:3947580, fields:[
+      payload.embeds.push({ title:"IZDATA LIČNA KARTA", color:4165480, fields:[
         { name:"Službenik:", value:document.getElementById('id_officer').value, inline:true },
         { name:"Građanin:", value:document.getElementById('id_target').value, inline:true },
         { name:"Datum rođenja:", value:document.getElementById('id_dob').value, inline:true },
         { name:"Prebivalište:", value:document.getElementById('id_city').value, inline:true }
       ]});
     } else if(type === 'driver'){
-      payload.embeds.push({ title:"IZDATA VOZAČKA DOZVOLA", color:4163659, fields:[
+      payload.embeds.push({ title:"IZDATA VOZAČKA DOZVOLA", color:4165480, fields:[
         { name:"Ispitivač:", value:document.getElementById('dr_officer').value, inline:true },
         { name:"Vozač:", value:document.getElementById('dr_target').value, inline:true },
         { name:"Kategorija:", value:document.getElementById('dr_cat').value, inline:false }
       ]});
     } else if(type === 'gun'){
-      payload.embeds.push({ title:"IZDAT ORUŽANI LIST", color:11106094, fields:[
+      payload.embeds.push({ title:"DOZVOLA ZA ORUŽJE", color:4165480, fields:[
         { name:"Službenik:", value:document.getElementById('gn_officer').value, inline:true },
         { name:"Vlasnik:", value:document.getElementById('gn_target').value, inline:true },
         { name:"Oružje:", value:document.getElementById('gn_weapon').value, inline:false }
       ]});
     } else if(type === 'veh'){
-      payload.embeds.push({ title:"REGISTRACIJA VOZILA", color:4163659, fields:[
+      payload.embeds.push({ title:"REGISTRACIJA VOZILA", color:4165480, fields:[
         { name:"Službenik:", value:document.getElementById('vh_officer').value, inline:true },
         { name:"Vlasnik:", value:document.getElementById('vh_target').value, inline:true },
         { name:"Vozilo:", value:document.getElementById('vh_model').value, inline:true },
         { name:"Tablice:", value:document.getElementById('vh_plates').value, inline:true }
       ]});
     } else if(type === 'wanted'){
-      payload.embeds.push({ title:"AKTIVNA POTJERNICA", color:8355711, fields:[
+      payload.embeds.push({ title:"RASPISANA POTJERNICA", color:11875919, fields:[
         { name:"Nalog izdao:", value:document.getElementById('wt_officer').value, inline:true },
-        { name:"Traženi:", value:document.getElementById('wt_target').value, inline:true },
-        { name:"Nivo opasnosti:", value:document.getElementById('wt_level').value, inline:false },
+        { name:"Traženo lice:", value:document.getElementById('wt_target').value, inline:true },
+        { name:"Nivo opasnosti:", value:document.getElementById('wt_level').value, inline:true },
         { name:"Razlog:", value:document.getElementById('wt_reason').value, inline:false }
       ]});
     } else if(type === 'evidence'){
-      payload.embeds.push({ title:"ZAPLJENA DOKAZA", color:11106094, fields:[
+      payload.embeds.push({ title:"ZAPLIJENA DOKAZA", color:8355711, fields:[
         { name:"Službenik:", value:document.getElementById('ev_officer').value, inline:true },
-        { name:"Mjesto/lice:", value:document.getElementById('ev_target').value, inline:true },
-        { name:"Zaplijenjeno:", value:document.getElementById('ev_items').value, inline:false }
+        { name:"Lice/Mjesto:", value:document.getElementById('ev_target').value, inline:true },
+        { name:"Predmeti:", value:document.getElementById('ev_items').value, inline:false }
       ]});
     } else if(type === 'incident'){
-      payload.embeds.push({ title:"IZVJEŠTAJ O INCIDENTU", color:3947580, fields:[
-        { name:"Podnosilac:", value:document.getElementById('in_officer').value, inline:true },
+      payload.embeds.push({ title:"IZVJEŠTAJ O INCIDENTU", color:11094095, fields:[
+        { name:"Sastavio:", value:document.getElementById('in_officer').value, inline:true },
         { name:"Lokacija:", value:document.getElementById('in_loc').value, inline:true },
         { name:"Opis:", value:document.getElementById('in_desc').value, inline:false }
       ]});
     }
 
-    const statusDiv = document.getElementById('status');
-    statusDiv.style.color = "var(--warn)";
-    statusDiv.textContent = "Šaljem u Discord...";
+    stats.total++;
+    document.getElementById('statTotal').textContent = stats.total;
+    document.getElementById('statFines').textContent = stats.fines;
+    document.getElementById('statWarrants').textContent = stats.warrants;
 
     fetch(url, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
-    }).then(res=>{
-      if(res.ok || res.status === 204){
-        statusDiv.style.color = "var(--ok)";
-        statusDiv.textContent = "Uspješno poslato i zavedeno u kanal.";
-        e.target.reset();
-        stats.total++;
-        renderStats();
-        if(settings.sound) beep();
-      } else {
-        statusDiv.style.color = "var(--danger)";
-        statusDiv.textContent = "Greška pri slanju. Status: " + res.status;
-      }
-    }).catch(()=>{
-      statusDiv.style.color = "var(--danger)";
-      statusDiv.textContent = "Mrežna greška pri slanju.";
+    }).then(res => {
+      statusEl.style.color = 'var(--ok)';
+      statusEl.textContent = 'Zapisnik uspešno poslat!';
+      e.target.reset();
+      if(currentUserProfile) prefillOfficerFields(currentUserProfile.name);
+    }).catch(err => {
+      statusEl.style.color = 'var(--danger)';
+      statusEl.textContent = 'Greška pri slanju.';
     });
-  }
-
-  function beep(){
-    try{
-      const ctx = new (window.AudioContext||window.webkitAudioContext)();
-      const o = ctx.createOscillator(); const g = ctx.createGain();
-      o.connect(g); g.connect(ctx.destination);
-      o.frequency.value = 660; g.gain.value = 0.05;
-      o.start(); setTimeout(()=>{o.stop(); ctx.close();}, 90);
-    }catch(_e){}
-  }
-
-  renderLeaderboard();
-  renderStats();
+  };
 </script>
 </body>
 </html>
