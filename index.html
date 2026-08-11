@@ -312,6 +312,41 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="infoOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>Info i pravila</h3>
+      <button class="modal-close" onclick="toggleInfoPanel(false)">✕</button>
+    </div>
+    <div style="font-size:12.5px;line-height:1.7;color:var(--white-dim);">
+      <div style="padding:12px 14px;background:var(--bg);border:1px solid var(--line);border-radius:var(--radius);color:var(--muted);margin-bottom:18px;">
+        <b style="color:var(--white);">Napomena:</b> Ovaj sistem je izrađen isključivo u zabavne / rol-plej (roleplay) svrhe za potrebe Roblox igre i njene zajednice. Ne predstavlja stvaran državni ili policijski sistem i nema nikakvu pravnu snagu van servera.
+      </div>
+      <h4 style="margin:0 0 10px;font-family:'Oswald',sans-serif;font-size:12px;letter-spacing:1px;color:var(--white);text-transform:uppercase;">Pravila korišćenja</h4>
+      <ol style="margin:0;padding-left:18px;">
+        <li style="margin-bottom:8px;">Sve informacije unesene u sistem moraju biti u skladu sa rol-plej scenarijem servera.</li>
+        <li style="margin-bottom:8px;">Zabranjeno je unositi uvredljiv, diskriminatoran ili neprimjeren sadržaj u bilo koje polje.</li>
+        <li style="margin-bottom:8px;">Poštuj cooldown period između slanja obrazaca — ne pokušavaj da ga zaobiđeš.</li>
+        <li style="margin-bottom:8px;">Zloupotreba sistema (spam, lažni podaci, netačne prijave) može rezultovati trajnim isključenjem sa sajta i sa servera.</li>
+        <li style="margin-bottom:8px;">Administrator zadržava pravo da izmijeni ili ukloni bilo koji nalog ili unos bez prethodne najave.</li>
+        <li>Sistem se koristi isključivo u svrhu unapređenja rol-plej iskustva, ne za stvarne pravne ili administrativne radnje.</li>
+      </ol>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="settingsOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>Podešavanja naloga</h3>
+      <button class="modal-close" onclick="toggleSettingsPanel(false)">✕</button>
+    </div>
+    <div id="settingsContent" style="font-size:12.5px;color:var(--white-dim);">
+      <div style="color:var(--muted);">Učitavanje...</div>
+    </div>
+  </div>
+</div>
+
 <div class="topbar">
   <div class="brand">
     <div class="crest">RS</div>
@@ -323,6 +358,8 @@
   <div class="topbar-right">
     <div class="status-pill"><span class="status-dot"></span>SISTEM AKTIVAN</div>
     <div class="who">Prijavljen: <b id="whoName">—</b></div>
+    <button class="btn-ghost" onclick="toggleInfoPanel(true)">Info</button>
+    <button class="btn-ghost" onclick="toggleSettingsPanel(true)">Podešavanja</button>
     <button class="btn-ghost btn-admin" id="adminBtn" onclick="toggleAdminPanel(true)">Admin Panel</button>
     <button class="btn-ghost" onclick="logout()">Odjava</button>
   </div>
@@ -540,6 +577,11 @@
       </form>
 
       <div id="status"></div>
+
+      <div style="margin-top:16px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg);font-size:11px;line-height:1.7;">
+        <div style="color:var(--warn);font-weight:600;margin-bottom:4px;">⏱ COOLDOWN: 20 sekundi između dva slanja istog tipa obrasca.</div>
+        <div style="color:var(--danger);font-weight:600;">⚠️ UPOZORENJE: Zloupotreba sistema (spam, lažni podaci, zaobilaženje cooldown-a) može rezultovati TRAJNIM BAN-om sa sajta i sa servera.</div>
+      </div>
     </div>
   </div>
 </div>
@@ -548,7 +590,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
   import { getFirestore, doc, setDoc, getDoc, deleteDoc, updateDoc, collection, onSnapshot, query, where, addDoc, getDocs, orderBy, serverTimestamp, increment } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -564,6 +606,8 @@
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const db = getFirestore(app);
+
+  let currentUserData = null; // podaci prijavljenog korisnika (za Podešavanja panel)
 
   const WEBHOOKS = {
     shifts: "https://discord.com/api/webhooks/1536330816060133386/e6LQFGoA2zHvuQ7c5xzOa1KJrBoipv8sOivyMbgR9CIqhJY8cK107v3LC0kSC8k1J5_9",
@@ -605,6 +649,7 @@
       if (userDoc.exists()) {
         const data = userDoc.data();
         if (data.approved === true) {
+          currentUserData = data;
           document.getElementById('whoName').textContent = data.name || user.email;
           document.getElementById('gate').style.display = 'none';
 
@@ -627,6 +672,7 @@
         signOut(auth);
       }
     } else {
+      currentUserData = null;
       document.getElementById('gate').style.display = 'flex';
       document.getElementById('whoName').textContent = '—';
       document.getElementById('adminBtn').style.display = 'none';
@@ -777,6 +823,54 @@
 
   window.logout = function(){ signOut(auth); };
   window.toggleAdminPanel = function(open){ document.getElementById('adminOverlay').classList.toggle('active', open); };
+  window.toggleInfoPanel = function(open){ document.getElementById('infoOverlay').classList.toggle('active', open); };
+  window.toggleSettingsPanel = function(open){
+    document.getElementById('settingsOverlay').classList.toggle('active', open);
+    if(open) renderSettingsContent();
+  };
+
+  function renderSettingsContent(){
+    const el = document.getElementById('settingsContent');
+    if(!currentUserData){
+      el.innerHTML = '<div style="color:var(--muted);">Nisi prijavljen.</div>';
+      return;
+    }
+    el.innerHTML = `
+      <div class="form-group" style="margin-bottom:12px;">
+        <label>Ime i prezime</label>
+        <div style="padding:9px 11px;background:var(--bg);border:1px solid var(--line);border-radius:var(--radius);color:var(--white);">${currentUserData.name || '/'}</div>
+      </div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label>Čin / jedinica</label>
+        <div style="padding:9px 11px;background:var(--bg);border:1px solid var(--line);border-radius:var(--radius);color:var(--white);">${currentUserData.rank || '/'}</div>
+      </div>
+      <div class="form-group" style="margin-bottom:18px;">
+        <label>Email</label>
+        <div style="padding:9px 11px;background:var(--bg);border:1px solid var(--line);border-radius:var(--radius);color:var(--white);">${currentUserData.email || '/'}</div>
+      </div>
+      <button type="button" class="submit-btn" onclick="sendPasswordReset()">Pošalji link za reset lozinke</button>
+      <div id="settingsStatus" style="margin-top:10px;font-size:11.5px;font-family:'JetBrains Mono',monospace;"></div>
+    `;
+  }
+
+  window.sendPasswordReset = async function(){
+    const statusEl = document.getElementById('settingsStatus');
+    if(!currentUserData || !currentUserData.email){
+      statusEl.style.color = 'var(--danger)';
+      statusEl.textContent = 'Nema dostupnog emaila.';
+      return;
+    }
+    statusEl.style.color = 'var(--muted)';
+    statusEl.textContent = 'Slanje...';
+    try {
+      await sendPasswordResetEmail(auth, currentUserData.email);
+      statusEl.style.color = 'var(--ok)';
+      statusEl.textContent = 'Link za reset lozinke poslat na ' + currentUserData.email + ' (ako email zaista postoji).';
+    } catch(err){
+      statusEl.style.color = 'var(--danger)';
+      statusEl.textContent = 'Greška: ' + err.message;
+    }
+  };
 
   function listenForPendingRequests(){
     const q = query(collection(db, "users"), where("approved", "==", false));
@@ -903,17 +997,62 @@
     };
   }
 
+  // ===== COOLDOWN SISTEM =====
+  const COOLDOWN_MS = 20000; // 20 sekundi po tipu obrasca, po policajcu
+
+  function cooldownKey(officerName, type){
+    return (officerName + '_' + type).replace(/[^a-zA-Z0-9čćžšđČĆŽŠĐ]/g, '_').slice(0, 150);
+  }
+
+  // Vraća broj preostalih sekundi cooldown-a (0 ako se može slati)
+  async function checkCooldown(officerName, type){
+    try {
+      const ref = doc(db, "cooldowns", cooldownKey(officerName, type));
+      const snap = await getDoc(ref);
+      if (snap.exists()) {
+        const last = snap.data().lastSent || 0;
+        const diff = Date.now() - last;
+        if (diff < COOLDOWN_MS) return Math.ceil((COOLDOWN_MS - diff) / 1000);
+      }
+    } catch(e){ /* ako baza ne odgovori, propusti slanje */ }
+    return 0;
+  }
+
+  async function setCooldown(officerName, type){
+    try {
+      await setDoc(doc(db, "cooldowns", cooldownKey(officerName, type)), { lastSent: Date.now() });
+    } catch(e){ /* nije kritično ako ne uspije */ }
+  }
+
+  // Mapa polja koja sadrže ime policajca za svaki tip obrasca (za cooldown provjeru)
+  const OFFICER_FIELD = {
+    shifts:'sh_officer', arrest_warrants:'aw_officer', arrest_logs:'al_officer',
+    punishment:'p_officer', id:'id_officer', driver:'dr_officer', gun:'gn_officer',
+    veh:'vh_officer', wanted:'wt_officer', evidence:'ev_officer', incident:'in_officer',
+    feedback:'fb_officer'
+  };
+
   window.sendDiscord = async function(event, type){
     event.preventDefault();
     const status = document.getElementById('status');
+
+    const currentUser = document.getElementById('whoName').textContent || "Službenik";
+    const V = id => (document.getElementById(id) ? document.getElementById(id).value : "");
+
+    // Provjera cooldown-a prije bilo čega drugog
+    const preOfficerName = OFFICER_FIELD[type] ? V(OFFICER_FIELD[type]) : currentUser;
+    const remaining = await checkCooldown(preOfficerName, type);
+    if (remaining > 0) {
+      status.style.color = 'var(--warn)';
+      status.textContent = `⏱ Sačekaj još ${remaining}s prije ponovnog slanja ovog obrasca (cooldown).`;
+      return;
+    }
+
     status.style.color = 'var(--muted)';
     status.textContent = 'Slanje zapisnika...';
 
-    const currentUser = document.getElementById('whoName').textContent || "Službenik";
     let payload = {};
     let officerName = "";
-
-    const V = id => (document.getElementById(id) ? document.getElementById(id).value : "");
 
     if(type === 'shifts'){
       officerName = V('sh_officer');
@@ -1032,6 +1171,8 @@
         headers: {'Content-Type':'application/json'},
         body: JSON.stringify(payload)
       });
+
+      await setCooldown(officerName || preOfficerName, type);
 
       if(officerName && officerName !== '—'){
         const lbRef = doc(db, "leaderboard", officerName);
