@@ -242,7 +242,14 @@
 </head>
 <body>
 
-<div class="gate" id="gate">
+<div id="authLoading" style="position:fixed;inset:0;background:#0a0d12;z-index:200;display:flex;align-items:center;justify-content:center;">
+  <div style="text-align:center;">
+    <div style="width:46px;height:46px;border:1px solid #c7cbd4;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-family:'Oswald',sans-serif;font-weight:700;font-size:15px;color:#f4f5f7;">RS</div>
+    <div style="font-size:11px;letter-spacing:1px;color:#7d8798;text-transform:uppercase;">Učitavanje sistema...</div>
+  </div>
+</div>
+
+<div class="gate" id="gate" style="display:none;">
   <div class="gate-card">
     <div class="gate-crest">RS</div>
     <h2>MUP Republike Srpske</h2>
@@ -374,6 +381,12 @@
       </div>
     </div>
     <div class="side-block">
+      <div class="side-title">Aktivne patrole <span class="tag">UŽIVO</span></div>
+      <div id="patrolList">
+        <div class="lb-empty">Učitavanje...</div>
+      </div>
+    </div>
+    <div class="side-block">
       <div class="side-title">Ukupna statistika <span class="tag">TRAJNO</span></div>
       <div class="lb-row"><div class="lb-name">Ukupno obrazaca poslato</div><div class="lb-count" id="statTotal">0</div></div>
       <div class="lb-row"><div class="lb-name">Izdatih kazni</div><div class="lb-count" id="statFines">0</div></div>
@@ -401,6 +414,7 @@
       <button class="tab-btn" onclick="openTab(event, 'evidence')">Dokazi</button>
       <button class="tab-btn" onclick="openTab(event, 'incident')">Incident</button>
       <button class="tab-btn" onclick="openTab(event, 'citizens_db')" style="border-color:var(--steel-bright);color:var(--steel-bright);">Baza građana</button>
+      <button class="tab-btn" onclick="openTab(event, 'history')" style="border-color:var(--steel-bright);color:var(--steel-bright);">Istorija</button>
       <button class="tab-btn" onclick="openTab(event, 'payroll')" style="border-color:var(--ok);color:var(--ok);">Plate / bonusi</button>
       <button class="tab-btn" onclick="openTab(event, 'dispatch')" style="border-color:var(--warn);color:var(--warn);">Dispečer (122)</button>
       <button class="tab-btn" onclick="openTab(event, 'feedback')">Pohvale / Žalbe</button>
@@ -541,6 +555,20 @@
         <div id="citizenResult" style="margin-top:15px; font-size:13px;"></div>
       </div>
 
+      <!-- Istorija svih poslatih obrazaca -->
+      <div id="formHistory" class="tab-content">
+        <h3>Istorija — Svi poslati obrasci</h3>
+        <div class="form-grid">
+          <div class="form-group full">
+            <label>Pretraga po imenu policajca ili licu</label>
+            <input type="text" id="historySearch" placeholder="npr. Petar Petrović" oninput="renderHistoryList()">
+          </div>
+        </div>
+        <div id="historyList" style="margin-top:15px;">
+          <div style="font-size:12px;color:var(--muted);">Učitavanje istorije...</div>
+        </div>
+      </div>
+
       <!-- Kalkulator plata i bonusa -->
       <div id="formPayroll" class="tab-content">
         <h3>Kalkulator plata i bonusa</h3>
@@ -591,7 +619,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
   import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-  import { getFirestore, doc, setDoc, getDoc, deleteDoc, updateDoc, collection, onSnapshot, query, where, addDoc, getDocs, orderBy, serverTimestamp, increment } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+  import { getFirestore, doc, setDoc, getDoc, deleteDoc, updateDoc, collection, onSnapshot, query, where, addDoc, getDocs, orderBy, limit, serverTimestamp, increment } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyBt-aqHyhvXOfJmTRvN5LRAwiguaY1wek0",
@@ -608,6 +636,7 @@
   const db = getFirestore(app);
 
   let currentUserData = null; // podaci prijavljenog korisnika (za Podešavanja panel)
+  const OWNER_EMAIL = "bojangavranovic3@gmail.com"; // glavni admin - samo on moze skidati admina drugim adminima
 
   const WEBHOOKS = {
     shifts: "https://discord.com/api/webhooks/1536330816060133386/e6LQFGoA2zHvuQ7c5xzOa1KJrBoipv8sOivyMbgR9CIqhJY8cK107v3LC0kSC8k1J5_9",
@@ -644,6 +673,7 @@
   });
 
   onAuthStateChanged(auth, async (user) => {
+    const authLoadingEl = document.getElementById('authLoading');
     if (user) {
       const userDoc = await getDoc(doc(db, "users", user.uid));
       if (userDoc.exists()) {
@@ -652,6 +682,7 @@
           currentUserData = data;
           document.getElementById('whoName').textContent = data.name || user.email;
           document.getElementById('gate').style.display = 'none';
+          if (authLoadingEl) authLoadingEl.style.display = 'none';
 
           if (data.role === 'admin') {
             document.getElementById('adminBtn').style.display = 'inline-block';
@@ -661,11 +692,15 @@
             document.getElementById('adminBtn').style.display = 'none';
           }
           prefillOfficerFields(data.name);
+          listenForHistory();
+          listenForShiftStatus();
         } else {
+          if (authLoadingEl) authLoadingEl.style.display = 'none';
           alert("Vaš nalog još uvijek nije odobren od strane administratora.");
           signOut(auth);
         }
       } else {
+        if (authLoadingEl) authLoadingEl.style.display = 'none';
         // Auth nalog postoji, ali Firestore profil ne (npr. admin ga je izbrisao).
         // Ne izlažemo aplikaciju - vraćamo na gate i tražimo ponovnu registraciju.
         document.getElementById('gate').style.display = 'flex';
@@ -674,6 +709,7 @@
     } else {
       currentUserData = null;
       document.getElementById('gate').style.display = 'flex';
+      if (authLoadingEl) authLoadingEl.style.display = 'none';
       document.getElementById('whoName').textContent = '—';
       document.getElementById('adminBtn').style.display = 'none';
     }
@@ -713,17 +749,41 @@
 
   onSnapshot(collection(db, "dispatch"), (snapshot) => {
     const feed = document.getElementById('dispatchFeed');
-    if(snapshot.empty){
-      feed.innerHTML = '<div style="font-size:12px;color:var(--muted);">Nema aktivnih poziva.</div>';
-      return;
-    }
+    const now = Date.now();
     let html = '';
+    let count = 0;
     snapshot.forEach(docSnap => {
       const d = docSnap.data();
-      html += `<div class="feed-box"><b>${d.loc}</b> — ${d.type}<br><small style="color:var(--muted);">${d.desc}</small></div>`;
+      const age = now - (d.createdAt || 0);
+      if (age > 10 * 60 * 1000) {
+        // Poziv je stariji od 10 minuta - opportunističko brisanje (best effort).
+        deleteDoc(doc(db, "dispatch", docSnap.id)).catch(()=>{});
+        return;
+      }
+      count++;
+      const accepted = !!d.acceptedBy;
+      html += `<div class="feed-box">
+        <b>${d.loc}</b> — ${d.type}<br>
+        <small style="color:var(--muted);">${d.desc}</small>
+        <div style="margin-top:8px;">
+          ${accepted
+            ? `<span style="color:var(--ok);font-size:11px;font-weight:600;">✓ Prihvatio: ${d.acceptedBy}</span>`
+            : `<button class="btn-accept" onclick="acceptDispatchCall('${docSnap.id}')">Prihvati poziv</button>`
+          }
+        </div>
+      </div>`;
     });
-    feed.innerHTML = html;
+    feed.innerHTML = count > 0 ? html : '<div style="font-size:12px;color:var(--muted);">Nema aktivnih poziva.</div>';
   });
+
+  window.acceptDispatchCall = async function(id){
+    const officer = document.getElementById('whoName').textContent || 'Nepoznat';
+    try {
+      await updateDoc(doc(db, "dispatch", id), { acceptedBy: officer, acceptedAt: Date.now() });
+    } catch(err){
+      alert('Greška: ' + err.message);
+    }
+  };
 
   window.switchGate = function(mode){
     document.getElementById('gateBtnLogin').classList.toggle('active', mode==='login');
@@ -879,7 +939,7 @@
     });
   }
 
-  // Lista svih odobrenih (approved) korisnika, sa dugmetom za brisanje.
+  // Lista svih odobrenih (approved) korisnika, sa dugmetom za brisanje i admin ulogu.
   function listenForAllUsers(){
     const q = query(collection(db, "users"), where("approved", "==", true));
     onSnapshot(q, (snapshot) => {
@@ -888,22 +948,38 @@
         listEl.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:10px 0;">Nema odobrenih korisnika.</div>';
         return;
       }
+      const iAmOwner = currentUserData && currentUserData.email === OWNER_EMAIL;
       let html = '';
       let count = 0;
       snapshot.forEach((docSnap) => {
         const u = docSnap.data();
         count++;
         const isAdmin = u.role === 'admin';
+        const isOwnerRow = u.email === OWNER_EMAIL;
         const safeName = (u.name || '').replace(/'/g, "\\'");
+
+        let roleBtn;
+        if(isOwnerRow){
+          roleBtn = `<span style="color:var(--warn);font-size:10.5px;font-weight:600;">GLAVNI ADMIN</span>`;
+        } else if(isAdmin && !iAmOwner){
+          roleBtn = `<span style="color:var(--muted);font-size:10.5px;">Admin (samo glavni admin može ukloniti)</span>`;
+        } else {
+          roleBtn = `<button class="btn-accept" style="${isAdmin ? 'background:var(--warn);' : ''}" onclick="toggleAdminRole('${u.uid}', '${safeName}', ${isAdmin})">${isAdmin ? 'Ukloni admin' : 'Daj admin'}</button>`;
+        }
+
+        const deleteBtn = (isOwnerRow || (isAdmin && !iAmOwner))
+          ? ''
+          : `<button class="btn-cancel" onclick="deleteUser('${u.uid}', '${safeName}')">Izbriši</button>`;
+
         html += `
           <div class="req-card">
             <div class="req-info">
-              <div>${u.name} (${u.rank || '/'})${isAdmin ? ' <span style="color:var(--warn);font-size:10px;">— ADMIN</span>' : ''}</div>
+              <div>${u.name} (${u.rank || '/'})${isAdmin && !isOwnerRow ? ' <span style="color:var(--warn);font-size:10px;">— ADMIN</span>' : ''}</div>
               <small>${u.email}</small>
             </div>
             <div class="req-actions">
-              <button class="btn-accept" style="${isAdmin ? 'background:var(--warn);' : ''}" onclick="toggleAdminRole('${u.uid}', '${safeName}', ${isAdmin})">${isAdmin ? 'Ukloni admin' : 'Daj admin'}</button>
-              <button class="btn-cancel" onclick="deleteUser('${u.uid}', '${safeName}')">Izbriši</button>
+              ${roleBtn}
+              ${deleteBtn}
             </div>
           </div>
         `;
@@ -912,8 +988,14 @@
     });
   }
 
-  // Daje ili uklanja admin ulogu korisniku, uz potvrdu.
+  // Daje ili uklanja admin ulogu korisniku, uz potvrdu. Samo glavni admin (owner)
+  // smije ukloniti admin prava nekome ko VEĆ jeste admin.
   window.toggleAdminRole = async function(uid, name, currentlyAdmin){
+    const iAmOwner = currentUserData && currentUserData.email === OWNER_EMAIL;
+    if(currentlyAdmin && !iAmOwner){
+      alert('Samo glavni admin može ukloniti admin prava drugom adminu.');
+      return;
+    }
     const isSelf = auth.currentUser && auth.currentUser.uid === uid;
     let msg;
     if (currentlyAdmin) {
@@ -923,7 +1005,11 @@
       msg = `Da li sigurno želiš da daš ADMIN prava korisniku ${name}? Dobiće puni pristup admin panelu (odobravanje, brisanje, davanje admina drugima).`;
     }
     if(!confirm(msg)) return;
-    await updateDoc(doc(db, "users", uid), { role: currentlyAdmin ? "user" : "admin" });
+    try {
+      await updateDoc(doc(db, "users", uid), { role: currentlyAdmin ? "user" : "admin" });
+    } catch(err){
+      alert('Greška: ' + err.message);
+    }
   };
 
   window.approveUser = async function(uid){ await updateDoc(doc(db, "users", uid), { approved: true }); };
@@ -955,16 +1041,38 @@
     const type = document.getElementById('dsp_type').value;
     const desc = document.getElementById('dsp_desc').value;
 
-    await addDoc(collection(db, "dispatch"), { loc, type, desc, time: serverTimestamp() });
+    await addDoc(collection(db, "dispatch"), { loc, type, desc, createdAt: Date.now(), acceptedBy: null, acceptedAt: null });
     alert("Poziv uspješno poslat centrali!");
     e.target.reset();
   };
 
   window.searchCitizenFiles = async function(){
-    const name = document.getElementById('searchCitizenName').value.trim();
+    const nameRaw = document.getElementById('searchCitizenName').value.trim();
     const resEl = document.getElementById('citizenResult');
-    if(!name){ resEl.innerHTML = "Unesite ime za pretragu."; return; }
-    resEl.innerHTML = `<b>Pretraga za građanina:</b> ${name}<br><span style="color:var(--ok);">Građanin nema aktivnih potjernica ni teških krivičnih djela u trenutnom sistemu.</span>`;
+    if(!nameRaw){ resEl.innerHTML = "Unesite ime za pretragu."; return; }
+    resEl.innerHTML = '<span style="color:var(--muted);">Pretraga u toku...</span>';
+    const nameLower = nameRaw.toLowerCase();
+    try {
+      const q = query(collection(db, "history"), where("type", "==", "wanted"));
+      const snap = await getDocs(q);
+      const matches = [];
+      snap.forEach(docSnap => {
+        const d = docSnap.data();
+        if((d.target || '').toLowerCase().includes(nameLower)) matches.push(d);
+      });
+      if(matches.length === 0){
+        resEl.innerHTML = `<b>Pretraga za:</b> ${nameRaw}<br><span style="color:var(--ok);">Nema aktivnih potjernica za uneseno ime.</span>`;
+        return;
+      }
+      resEl.innerHTML = `<b>Pretraga za:</b> ${nameRaw}<br><span style="color:var(--danger);font-weight:600;">⚠ Pronađeno ${matches.length} potjernic${matches.length===1?'a':'e'}!</span>` +
+        matches.map(m => {
+          const time = m.createdAt ? formatTimeFull(m.createdAt) : '';
+          const fieldsHtml = (m.fields || []).map(f => `<div style="font-size:11px;color:var(--muted);"><b style="color:var(--white-dim);">${f.name}</b> ${f.value}</div>`).join('');
+          return `<div class="feed-box" style="margin-top:10px;">${fieldsHtml}<div style="color:var(--muted);font-size:10.5px;margin-top:6px;">${time}</div></div>`;
+        }).join('');
+    } catch(err){
+      resEl.innerHTML = `<span style="color:var(--danger);">Greška pri pretrazi: ${err.message}</span>`;
+    }
   };
 
   // Formatira trenutno vrijeme lijepo za prikaz (Discord embed footer)
@@ -972,6 +1080,30 @@
     const d = new Date();
     const pad = n => String(n).padStart(2,'0');
     return `${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()}. u ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  function formatTime(ms){
+    const d = new Date(ms);
+    const pad = n => String(n).padStart(2,'0');
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  function formatTimeFull(ms){
+    const d = new Date(ms);
+    const pad = n => String(n).padStart(2,'0');
+    return `${pad(d.getDate())}.${pad(d.getMonth()+1)}. u ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  function formatDuration(ms){
+    const totalMin = Math.floor(ms / 60000);
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    if(h > 0) return `${h}h ${m}min`;
+    return `${m}min`;
+  }
+
+  function sanitizeKey(str){
+    return (String(str).replace(/[^a-zA-Z0-9čćžšđČĆŽŠĐ]/g, '_').slice(0, 150)) || 'unknown';
   }
 
   // Zvanični grb Republike Srpske (Wikimedia Commons, javno dostupno)
@@ -995,7 +1127,7 @@
   const COOLDOWN_MS = 20000; // 20 sekundi po tipu obrasca, po policajcu
 
   function cooldownKey(officerName, type){
-    return (officerName + '_' + type).replace(/[^a-zA-Z0-9čćžšđČĆŽŠĐ]/g, '_').slice(0, 150);
+    return sanitizeKey(officerName + '_' + type);
   }
 
   // Vraća broj preostalih sekundi cooldown-a (0 ako se može slati)
@@ -1026,6 +1158,126 @@
     feedback:'fb_officer'
   };
 
+  // Mapa polja koja sadrže "metu" obrasca (za istoriju i pretragu baze građana)
+  const TARGET_FIELD = {
+    arrest_warrants:'aw_target', arrest_logs:'al_target', punishment:'p_target',
+    id:'id_target', driver:'dr_target', gun:'gn_target', veh:'vh_target',
+    wanted:'wt_target', evidence:'ev_target', incident:'in_loc'
+  };
+
+  const TYPE_LABELS = {
+    shifts:'Smjena', arrest_warrants:'Nalog hapšenja', arrest_logs:'Hapšenje',
+    punishment:'Kazna', id:'Lična karta', driver:'Vozačka', gun:'Oružje',
+    veh:'Saobraćajna', wanted:'Potjernica', evidence:'Dokazi', incident:'Incident',
+    feedback:'Pohvala/Žalba'
+  };
+
+  // ===== ISTORIJA (svi poslati obrasci, trajno sačuvano) =====
+  let historyCache = [];
+
+  async function saveHistory(type, typeLabel, officerName, target, fields){
+    try {
+      await addDoc(collection(db, "history"), {
+        type, typeLabel, officer: officerName || "", target: target || "",
+        fields: fields.map(f => ({ name: f.name, value: (f.value && String(f.value).trim()) ? String(f.value) : "/" })),
+        createdAt: Date.now()
+      });
+    } catch(e){ /* ne prekidaj tok ako istorija ne uspije da se sačuva */ }
+  }
+
+  function listenForHistory(){
+    const q = query(collection(db, "history"), orderBy("createdAt", "desc"), limit(100));
+    onSnapshot(q, (snapshot) => {
+      historyCache = [];
+      snapshot.forEach(docSnap => historyCache.push(docSnap.data()));
+      renderHistoryList();
+    });
+  }
+
+  window.renderHistoryList = function(){
+    const el = document.getElementById('historyList');
+    if(!el) return;
+    const searchEl = document.getElementById('historySearch');
+    const search = searchEl ? searchEl.value.trim().toLowerCase() : '';
+    const now = Date.now();
+
+    let items = historyCache.filter(h => {
+      // Incident zapisi stariji od 5 minuta se sakrivaju iz prikaza (ostaju u bazi)
+      if(h.type === 'incident' && (now - (h.createdAt || 0)) > 5 * 60 * 1000) return false;
+      if(!search) return true;
+      const hay = ((h.officer || '') + ' ' + (h.target || '')).toLowerCase();
+      return hay.includes(search);
+    });
+
+    if(items.length === 0){
+      el.innerHTML = '<div style="font-size:12px;color:var(--muted);">Nema zapisa.</div>';
+      return;
+    }
+
+    el.innerHTML = items.map(h => {
+      const time = h.createdAt ? formatTimeFull(h.createdAt) : '';
+      const fieldsHtml = (h.fields || []).map(f => `<div style="font-size:11px;color:var(--muted);"><b style="color:var(--white-dim);">${f.name}</b> ${f.value}</div>`).join('');
+      return `<div class="feed-box">
+        <b>${h.typeLabel || h.type}</b> — ${h.officer || '/'}${h.target ? ' → ' + h.target : ''}
+        <div style="color:var(--muted);font-size:10.5px;margin:4px 0 6px;">${time}</div>
+        ${fieldsHtml}
+      </div>`;
+    }).join('');
+  };
+
+  // ===== STATUS PATROLE (ko je na smjeni, pauzi, itd) =====
+  async function computeShiftDuration(officerName){
+    try {
+      const ref = doc(db, "shiftStatus", sanitizeKey(officerName));
+      const snap = await getDoc(ref);
+      if(snap.exists()){
+        const d = snap.data();
+        if(d.shiftStartedAt) return formatDuration(Date.now() - d.shiftStartedAt);
+      }
+    } catch(e){}
+    return null;
+  }
+
+  async function updateShiftStatus(officerName, shiftType){
+    try {
+      const ref = doc(db, "shiftStatus", sanitizeKey(officerName));
+      if(shiftType === 'Početak smjene'){
+        await setDoc(ref, { officer: officerName, status:'on_shift', shiftStartedAt: Date.now(), breakStartedAt: null, lastUpdate: Date.now() });
+      } else if(shiftType === 'Pauza'){
+        await setDoc(ref, { officer: officerName, status:'on_break', breakStartedAt: Date.now(), lastUpdate: Date.now() }, { merge: true });
+      } else if(shiftType === 'Kraj smjene'){
+        await setDoc(ref, { officer: officerName, status:'off_shift', shiftEndedAt: Date.now(), lastUpdate: Date.now() }, { merge: true });
+      }
+    } catch(e){}
+  }
+
+  function listenForShiftStatus(){
+    onSnapshot(collection(db, "shiftStatus"), (snapshot) => {
+      const el = document.getElementById('patrolList');
+      if(!el) return;
+      let items = [];
+      snapshot.forEach(docSnap => {
+        const d = docSnap.data();
+        if(d.status && d.status !== 'off_shift') items.push(d);
+      });
+      if(items.length === 0){
+        el.innerHTML = '<div class="lb-empty">Niko trenutno nije na smjeni.</div>';
+        return;
+      }
+      items.sort((a,b) => (b.shiftStartedAt || 0) - (a.shiftStartedAt || 0));
+      el.innerHTML = items.map(d => {
+        const isBreak = d.status === 'on_break';
+        const dot = isBreak ? 'var(--warn)' : 'var(--ok)';
+        const label = isBreak ? 'Na pauzi' : 'Na smjeni';
+        const since = d.shiftStartedAt ? formatTime(d.shiftStartedAt) : '?';
+        return `<div class="lb-row">
+          <div style="width:8px;height:8px;border-radius:50%;background:${dot};flex:0 0 auto;"></div>
+          <div class="lb-name">${d.officer}<br><small style="color:var(--muted);">${label} od ${since}</small></div>
+        </div>`;
+      }).join('');
+    });
+  }
+
   window.sendDiscord = async function(event, type){
     event.preventDefault();
     const status = document.getElementById('status');
@@ -1033,9 +1285,12 @@
     const currentUser = document.getElementById('whoName').textContent || "Službenik";
     const V = id => (document.getElementById(id) ? document.getElementById(id).value : "");
 
+    const officerName = OFFICER_FIELD[type] ? V(OFFICER_FIELD[type]) : currentUser;
+    const targetValue = TARGET_FIELD[type] ? V(TARGET_FIELD[type]) : "";
+    const typeLabelValue = TYPE_LABELS[type] || type;
+
     // Provjera cooldown-a prije bilo čega drugog
-    const preOfficerName = OFFICER_FIELD[type] ? V(OFFICER_FIELD[type]) : currentUser;
-    const remaining = await checkCooldown(preOfficerName, type);
+    const remaining = await checkCooldown(officerName, type);
     if (remaining > 0) {
       status.style.color = 'var(--warn)';
       status.textContent = `⏱ Sačekaj još ${remaining}s prije ponovnog slanja ovog obrasca (cooldown).`;
@@ -1046,117 +1301,122 @@
     status.textContent = 'Slanje zapisnika...';
 
     let payload = {};
-    let officerName = "";
+    let fields = [];
 
     if(type === 'shifts'){
-      officerName = V('sh_officer');
-      payload = buildEmbed("🕒 EVIDENCIJA SMJENE", 3447003, [
+      const shiftType = V('sh_type');
+      fields = [
         {name:"Službenik:", value:officerName},
-        {name:"Tip aktivnosti:", value:V('sh_type')},
+        {name:"Tip aktivnosti:", value:shiftType},
         {name:"Napomena / partner:", value:V('sh_note'), inline:false},
         {name:"Vrijeme prijave:", value:nowFormatted(), inline:false}
-      ]);
+      ];
+      if(shiftType === 'Kraj smjene'){
+        const dur = await computeShiftDuration(officerName);
+        if(dur) fields.push({name:"Trajanje smjene:", value:dur, inline:false});
+      }
+      payload = buildEmbed("🕒 EVIDENCIJA SMJENE", 3447003, fields);
     } else if(type === 'arrest_warrants'){
-      officerName = V('aw_officer');
-      payload = buildEmbed("🔴 NALOG ZA HAPŠENJE", 10038562, [
+      fields = [
         {name:"Nalog izdao:", value:officerName},
-        {name:"Ime osumnjičenog:", value:V('aw_target')},
+        {name:"Ime osumnjičenog:", value:targetValue},
         {name:"Krivično djelo:", value:V('aw_crime'), inline:false},
         {name:"Vrijeme izdavanja:", value:nowFormatted(), inline:false}
-      ]);
+      ];
+      payload = buildEmbed("🔴 NALOG ZA HAPŠENJE", 10038562, fields);
     } else if(type === 'arrest_logs'){
-      officerName = V('al_officer');
-      payload = buildEmbed("🚔 ZAPISNIK O LIŠENJU SLOBODE", 15105570, [
+      fields = [
         {name:"Policajac:", value:officerName},
-        {name:"Uhapšeno lice:", value:V('al_target')},
+        {name:"Uhapšeno lice:", value:targetValue},
         {name:"Vrijeme zatvora (min):", value:V('al_time')},
         {name:"Razlog i oduzeti predmeti:", value:V('al_reason'), inline:false},
         {name:"Vrijeme hapšenja:", value:nowFormatted(), inline:false}
-      ]);
+      ];
+      payload = buildEmbed("🚔 ZAPISNIK O LIŠENJU SLOBODE", 15105570, fields);
     } else if(type === 'punishment'){
-      officerName = V('p_officer');
-      payload = buildEmbed("⚖️ IZDATA KAZNA", 15158332, [
+      fields = [
         {name:"Policajac:", value:officerName},
-        {name:"Počinilac:", value:V('p_target')},
+        {name:"Počinilac:", value:targetValue},
         {name:"Prekršaj:", value:V('p_type'), inline:false},
         {name:"Iznos kazne:", value:V('p_price') + " KM"},
         {name:"Vrijeme izdavanja:", value:nowFormatted(), inline:false}
-      ]);
+      ];
+      payload = buildEmbed("⚖️ IZDATA KAZNA", 15158332, fields);
     } else if(type === 'id'){
-      officerName = V('id_officer');
-      payload = buildEmbed("🪪 IZDAVANJE LIČNE KARTE", 3901635, [
+      fields = [
         {name:"Službenik:", value:officerName},
-        {name:"Ime i prezime građanina:", value:V('id_target')},
+        {name:"Ime i prezime građanina:", value:targetValue},
         {name:"Datum rođenja:", value:V('id_dob')},
         {name:"Prebivalište:", value:V('id_city')},
         {name:"Vrijeme izdavanja:", value:nowFormatted(), inline:false}
-      ]);
+      ];
+      payload = buildEmbed("🪪 IZDAVANJE LIČNE KARTE", 3901635, fields);
     } else if(type === 'driver'){
-      officerName = V('dr_officer');
-      payload = buildEmbed("🚗 IZDAVANJE VOZAČKE DOZVOLE", 2201331, [
+      fields = [
         {name:"Ispitivač / policajac:", value:officerName},
-        {name:"Vozač:", value:V('dr_target')},
+        {name:"Vozač:", value:targetValue},
         {name:"Kategorija:", value:V('dr_cat')},
         {name:"Vrijeme izdavanja:", value:nowFormatted(), inline:false}
-      ]);
+      ];
+      payload = buildEmbed("🚗 IZDAVANJE VOZAČKE DOZVOLE", 2201331, fields);
     } else if(type === 'gun'){
-      officerName = V('gn_officer');
-      payload = buildEmbed("🔫 IZDAVANJE DOZVOLE ZA ORUŽJE", 9807270, [
+      fields = [
         {name:"Službenik:", value:officerName},
-        {name:"Vlasnik oružja:", value:V('gn_target')},
+        {name:"Vlasnik oružja:", value:targetValue},
         {name:"Model oružja i serijski broj:", value:V('gn_weapon'), inline:false},
         {name:"Vrijeme izdavanja:", value:nowFormatted(), inline:false}
-      ]);
+      ];
+      payload = buildEmbed("🔫 IZDAVANJE DOZVOLE ZA ORUŽJE", 9807270, fields);
     } else if(type === 'veh'){
-      officerName = V('vh_officer');
-      payload = buildEmbed("🚙 REGISTRACIJA VOZILA", 1493724, [
+      fields = [
         {name:"Službenik:", value:officerName},
-        {name:"Vlasnik vozila:", value:V('vh_target')},
+        {name:"Vlasnik vozila:", value:targetValue},
         {name:"Marka i model:", value:V('vh_model')},
         {name:"Registarske tablice:", value:V('vh_plates')},
         {name:"Vrijeme registracije:", value:nowFormatted(), inline:false}
-      ]);
+      ];
+      payload = buildEmbed("🚙 REGISTRACIJA VOZILA", 1493724, fields);
     } else if(type === 'wanted'){
-      officerName = V('wt_officer');
-      payload = buildEmbed("🚨 RASPISANA POTJERNICA", 14495300, [
+      fields = [
         {name:"Nalog izdao:", value:officerName},
-        {name:"Traženo lice:", value:V('wt_target')},
+        {name:"Traženo lice:", value:targetValue},
         {name:"Nivo opasnosti:", value:V('wt_level')},
         {name:"Razlog:", value:V('wt_reason'), inline:false},
         {name:"Vrijeme raspisivanja:", value:nowFormatted(), inline:false}
-      ]);
+      ];
+      payload = buildEmbed("🚨 RASPISANA POTJERNICA", 14495300, fields);
     } else if(type === 'evidence'){
-      officerName = V('ev_officer');
-      payload = buildEmbed("🧾 ZAPLJENA DOKAZA", 6323595, [
+      fields = [
         {name:"Inspektor / policajac:", value:officerName},
-        {name:"Lice / mjesto zapljene:", value:V('ev_target')},
+        {name:"Lice / mjesto zapljene:", value:targetValue},
         {name:"Zaplijenjeni predmeti:", value:V('ev_items'), inline:false},
         {name:"Vrijeme zapljene:", value:nowFormatted(), inline:false}
-      ]);
+      ];
+      payload = buildEmbed("🧾 ZAPLJENA DOKAZA", 6323595, fields);
     } else if(type === 'incident'){
-      officerName = V('in_officer');
-      payload = buildEmbed("📋 IZVJEŠTAJ O INCIDENTU", 15844367, [
+      fields = [
         {name:"Izvještaj sastavio:", value:officerName},
-        {name:"Lokacija incidenta:", value:V('in_loc')},
+        {name:"Lokacija incidenta:", value:targetValue},
         {name:"Detaljan opis događaja:", value:V('in_desc'), inline:false},
         {name:"Vrijeme prijave:", value:nowFormatted(), inline:false}
-      ]);
+      ];
+      payload = buildEmbed("📋 IZVJEŠTAJ O INCIDENTU", 15844367, fields);
     } else if(type === 'feedback'){
-      officerName = V('fb_officer');
       const fbType = V('fb_type');
-      payload = buildEmbed(fbType === 'Pohvala' ? "⭐ POHVALA" : "⚠️ ŽALBA / PRITUŽBA", fbType === 'Pohvala' ? 3066993 : 15158332, [
+      fields = [
         {name:"Ime:", value:officerName},
         {name:"Vrsta unosa:", value:fbType},
         {name:"Opis i detalji:", value:V('fb_desc'), inline:false},
         {name:"Vrijeme unosa:", value:nowFormatted(), inline:false}
-      ]);
+      ];
+      payload = buildEmbed(fbType === 'Pohvala' ? "⭐ POHVALA" : "⚠️ ŽALBA / PRITUŽBA", fbType === 'Pohvala' ? 3066993 : 15158332, fields);
     } else {
-      officerName = currentUser;
-      payload = buildEmbed("📋 OPERATIVNI ZAPISNIK ("+type.toUpperCase()+")", 5793266, [
-        {name:"Podnio:", value:currentUser},
+      fields = [
+        {name:"Podnio:", value:officerName},
         {name:"Status:", value:"Uspješno zavedeno u sistem.", inline:false},
         {name:"Vrijeme:", value:nowFormatted(), inline:false}
-      ]);
+      ];
+      payload = buildEmbed("📋 OPERATIVNI ZAPISNIK ("+type.toUpperCase()+")", 5793266, fields);
     }
 
     try {
@@ -1166,7 +1426,9 @@
         body: JSON.stringify(payload)
       });
 
-      await setCooldown(officerName || preOfficerName, type);
+      await setCooldown(officerName, type);
+      await saveHistory(type, typeLabelValue, officerName, targetValue, fields);
+      if(type === 'shifts') await updateShiftStatus(officerName, V('sh_type'));
 
       if(officerName && officerName !== '—'){
         const lbRef = doc(db, "leaderboard", officerName);
