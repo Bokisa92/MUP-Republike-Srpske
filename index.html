@@ -110,7 +110,6 @@
   }
   .page-head p{margin:0;font-size:12.5px;color:var(--muted);}
 
-  /* Optimizovan navigacioni meni sa lakšim skrolovanjem na mobilnom */
   .nav-tabs{
     display:flex;
     flex-wrap:wrap;
@@ -264,7 +263,6 @@
       </div>
       <button type="submit" class="submit-btn">Prijavi se</button>
       <div id="loginStatus" style="font-size:11.5px;font-family:'JetBrains Mono',monospace;margin-top:10px;"></div>
-      <button type="button" id="resendVerifyBtn" onclick="resendVerification()" style="display:none;margin-top:10px;background:transparent;border:1px solid var(--line);color:var(--white-dim);padding:8px;border-radius:var(--radius);font-size:11px;cursor:pointer;width:100%;text-transform:uppercase;letter-spacing:0.5px;">Pošalji ponovo verifikacioni email</button>
     </form>
 
     <form id="signupForm" class="gate-form" onsubmit="handleSignup(event)">
@@ -351,7 +349,6 @@
       <p>Izaberi obrazac ispod ili koristi dodatne sistemske servise.</p>
     </div>
 
-    <!-- Sva dugmad u navigaciji prilagođena da staju savršeno na telefonima -->
     <div class="nav-tabs">
       <button class="tab-btn active" onclick="openTab(event, 'shifts')">Smjena</button>
       <button class="tab-btn" onclick="openTab(event, 'arrest_warrants')">Nalog hapšenja</button>
@@ -492,7 +489,6 @@
         <button type="submit" class="submit-btn">Pošalji izvještaj</button>
       </form>
 
-      <!-- Baza građana -->
       <div id="formCitizens_db" class="tab-content">
         <h3>Baza građana — Pregled dosijea</h3>
         <div class="form-grid">
@@ -505,14 +501,12 @@
         <div id="citizenResult" style="margin-top:15px; font-size:13px;"></div>
       </div>
 
-      <!-- Kalkulator plata i bonusa -->
       <div id="formPayroll" class="tab-content">
         <h3>Kalkulator plata i bonusa</h3>
         <p style="font-size:12px; color:var(--muted); margin-bottom:15px;">Izračunavanje plate na osnovu broja unesenih obrazaca (Osnovica po obrascu: 50 KM).</p>
         <div id="payrollList"><div style="font-size:12px;color:var(--muted);">Učitavanje podataka o platama...</div></div>
       </div>
 
-      <!-- Dispečer 122 -->
       <div id="formDispatch" class="tab-content">
         <h3>Dispečer — Prijave u realnom vremenu (122)</h3>
         <form onsubmit="sendDispatch(event)">
@@ -529,7 +523,6 @@
         </div>
       </div>
 
-      <!-- Pohvale i žalbe -->
       <form id="formFeedback" class="tab-content" onsubmit="sendDiscord(event, 'feedback')">
         <h3>Knjiga pohvala i žalbi</h3>
         <div class="form-grid">
@@ -549,7 +542,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, sendEmailVerification, reload } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
   import { getFirestore, doc, setDoc, getDoc, deleteDoc, updateDoc, collection, onSnapshot, query, where, addDoc, getDocs, orderBy, serverTimestamp, increment } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -602,22 +595,9 @@
 
   onAuthStateChanged(auth, async (user) => {
     if (user) {
-      // Osvježi status verifikacije emaila sa Firebase servera prije provjere.
-      await reload(user);
-      if (!user.emailVerified) {
-        document.getElementById('gate').style.display = 'flex';
-        document.getElementById('loginStatus').style.color = 'var(--danger)';
-        document.getElementById('loginStatus').textContent = 'Email nije potvrđen. Provjeri inbox i klikni na link, zatim se prijavi ponovo.';
-        document.getElementById('resendVerifyBtn').style.display = 'block';
-        await signOut(auth);
-        return;
-      }
       const userDoc = await getDoc(doc(db, "users", user.uid));
       if (userDoc.exists()) {
         const data = userDoc.data();
-        if (data.emailVerified !== true) {
-          await updateDoc(doc(db, "users", user.uid), { emailVerified: true });
-        }
         if (data.approved === true) {
           document.getElementById('whoName').textContent = data.name || user.email;
           document.getElementById('gate').style.display = 'none';
@@ -635,8 +615,6 @@
           signOut(auth);
         }
       } else {
-        // Auth nalog postoji, ali Firestore profil ne (npr. admin ga je izbrisao).
-        // Ne izlažemo aplikaciju - vraćamo na gate i tražimo ponovnu registraciju.
         document.getElementById('gate').style.display = 'flex';
         signOut(auth);
       }
@@ -714,8 +692,6 @@
     });
   };
 
-  // Registracija - pokriva i slučaj kad je admin izbrisao korisnika iz Firestore-a
-  // ali Auth nalog (email/lozinka) i dalje postoji, pa treba ponovo napraviti profil.
   window.handleSignup = function(e){
     e.preventDefault();
     const name = document.getElementById('suName').value.trim();
@@ -732,10 +708,9 @@
       await setDoc(doc(db, "users", u.uid), {
         uid: u.uid, name: name, email: email, rank: rank, approved: false, role: "user"
       });
-      await sendEmailVerification(u);
       sendSignupWebhook(name, email, rank);
       statusEl.style.color = 'var(--ok)';
-      statusEl.textContent = 'Zahtjev poslat! Provjeri email (' + email + ') i klikni link za potvrdu, zatim sačekaj odobrenje admina.';
+      statusEl.textContent = 'Zahtjev poslat! Čeka se odobrenje admina.';
       signOut(auth);
     }).catch(async (err) => {
       if (err.code === 'auth/email-already-in-use') {
@@ -751,14 +726,12 @@
             signOut(auth);
             return;
           }
-          // Firestore profil ne postoji (admin ga je izbrisao) - napravi ga ponovo.
           await setDoc(doc(db, "users", u.uid), {
             uid: u.uid, name: name, email: email, rank: rank, approved: false, role: "user"
           });
-          if (!u.emailVerified) await sendEmailVerification(u);
           sendSignupWebhook(name, email, rank);
           statusEl.style.color = 'var(--ok)';
-          statusEl.textContent = 'Profil ponovo kreiran! Provjeri email za potvrdu i sačekaj odobrenje admina.';
+          statusEl.textContent = 'Profil ponovo kreiran! Čeka se odobrenje admina.';
           signOut(auth);
         } catch (loginErr) {
           statusEl.style.color = 'var(--danger)';
@@ -769,35 +742,6 @@
         statusEl.textContent = 'Greška: ' + err.message;
       }
     });
-  };
-
-  // Ponovno slanje verifikacionog emaila sa login ekrana
-  window.resendVerification = async function(){
-    const email = document.getElementById('loginUser').value.trim();
-    const pass = document.getElementById('loginPass').value.trim();
-    const statusEl = document.getElementById('loginStatus');
-    if(!email || !pass){
-      statusEl.style.color = 'var(--danger)';
-      statusEl.textContent = 'Unesi email i lozinku, pa klikni ponovo.';
-      return;
-    }
-    try {
-      const cred = await signInWithEmailAndPassword(auth, email, pass);
-      if (cred.user.emailVerified) {
-        statusEl.style.color = 'var(--warn)';
-        statusEl.textContent = 'Email je već potvrđen. Probaj prijavu ponovo.';
-        document.getElementById('resendVerifyBtn').style.display = 'none';
-        await signOut(auth);
-        return;
-      }
-      await sendEmailVerification(cred.user);
-      statusEl.style.color = 'var(--ok)';
-      statusEl.textContent = 'Verifikacioni email ponovo poslat na ' + email + '.';
-      await signOut(auth);
-    } catch (err) {
-      statusEl.style.color = 'var(--danger)';
-      statusEl.textContent = 'Greška: ' + err.message;
-    }
   };
 
   function sendSignupWebhook(name, email, rank){
@@ -830,13 +774,11 @@
       let html = '';
       snapshot.forEach((docSnap) => {
         const u = docSnap.data();
-        const verified = u.emailVerified === true;
         html += `
           <div class="req-card">
             <div class="req-info">
               <div>${u.name} (${u.rank})</div>
               <small>${u.email}</small>
-              <small style="color:${verified ? 'var(--ok)' : 'var(--danger)'};">${verified ? '✓ Email potvrđen' : '✕ Email NIJE potvrđen'}</small>
             </div>
             <div class="req-actions">
               <button class="btn-accept" onclick="approveUser('${u.uid}')">Prihvati</button>
@@ -849,7 +791,6 @@
     });
   }
 
-  // Lista svih odobrenih (approved) korisnika, sa dugmetom za brisanje.
   function listenForAllUsers(){
     const q = query(collection(db, "users"), where("approved", "==", true));
     onSnapshot(q, (snapshot) => {
@@ -862,7 +803,7 @@
       let count = 0;
       snapshot.forEach((docSnap) => {
         const u = docSnap.data();
-        if (u.role === 'admin') return; // admine ne prikazujemo za brisanje
+        if (u.role === 'admin') return;
         count++;
         const safeName = (u.name || '').replace(/'/g, "\\'");
         html += `
@@ -884,9 +825,6 @@
   window.approveUser = async function(uid){ await updateDoc(doc(db, "users", uid), { approved: true }); };
   window.rejectUser = async function(uid){ await deleteDoc(doc(db, "users", uid)); };
 
-  // Briše Firestore profil korisnika. NAPOMENA: ne briše Firebase Authentication nalog
-  // (to zahtijeva Admin SDK / Cloud Function na serveru). Korisnik se ponovnom
-  // registracijom istim emailom/lozinkom vraća u sistem sa novim (approved:false) profilom.
   window.deleteUser = async function(uid, name){
     if(!confirm(`Da li sigurno želiš da izbrišeš korisnika ${name}? Ova akcija se ne može poništiti.`)) return;
     await deleteDoc(doc(db, "users", uid));
