@@ -264,7 +264,6 @@
       </div>
       <button type="submit" class="submit-btn">Prijavi se</button>
       <div id="loginStatus" style="font-size:11.5px;font-family:'JetBrains Mono',monospace;margin-top:10px;"></div>
-      <button type="button" id="resendVerifyBtn" onclick="resendVerification()" style="display:none;margin-top:10px;background:transparent;border:1px solid var(--line);color:var(--white-dim);padding:8px;border-radius:var(--radius);font-size:11px;cursor:pointer;width:100%;text-transform:uppercase;letter-spacing:0.5px;">Pošalji ponovo verifikacioni email</button>
     </form>
 
     <form id="signupForm" class="gate-form" onsubmit="handleSignup(event)">
@@ -549,7 +548,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, sendEmailVerification, reload } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
   import { getFirestore, doc, setDoc, getDoc, deleteDoc, updateDoc, collection, onSnapshot, query, where, addDoc, getDocs, orderBy, serverTimestamp, increment } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -602,22 +601,9 @@
 
   onAuthStateChanged(auth, async (user) => {
     if (user) {
-      // Osvježi status verifikacije emaila sa Firebase servera prije provjere.
-      await reload(user);
-      if (!user.emailVerified) {
-        document.getElementById('gate').style.display = 'flex';
-        document.getElementById('loginStatus').style.color = 'var(--danger)';
-        document.getElementById('loginStatus').textContent = 'Email nije potvrđen. Provjeri inbox i klikni na link, zatim se prijavi ponovo.';
-        document.getElementById('resendVerifyBtn').style.display = 'block';
-        await signOut(auth);
-        return;
-      }
       const userDoc = await getDoc(doc(db, "users", user.uid));
       if (userDoc.exists()) {
         const data = userDoc.data();
-        if (data.emailVerified !== true) {
-          await updateDoc(doc(db, "users", user.uid), { emailVerified: true });
-        }
         if (data.approved === true) {
           document.getElementById('whoName').textContent = data.name || user.email;
           document.getElementById('gate').style.display = 'none';
@@ -732,10 +718,9 @@
       await setDoc(doc(db, "users", u.uid), {
         uid: u.uid, name: name, email: email, rank: rank, approved: false, role: "user"
       });
-      await sendEmailVerification(u);
       sendSignupWebhook(name, email, rank);
       statusEl.style.color = 'var(--ok)';
-      statusEl.textContent = 'Zahtjev poslat! Provjeri email (' + email + ') i klikni link za potvrdu, zatim sačekaj odobrenje admina.';
+      statusEl.textContent = 'Zahtjev poslat! Čeka se odobrenje admina.';
       signOut(auth);
     }).catch(async (err) => {
       if (err.code === 'auth/email-already-in-use') {
@@ -755,10 +740,9 @@
           await setDoc(doc(db, "users", u.uid), {
             uid: u.uid, name: name, email: email, rank: rank, approved: false, role: "user"
           });
-          if (!u.emailVerified) await sendEmailVerification(u);
           sendSignupWebhook(name, email, rank);
           statusEl.style.color = 'var(--ok)';
-          statusEl.textContent = 'Profil ponovo kreiran! Provjeri email za potvrdu i sačekaj odobrenje admina.';
+          statusEl.textContent = 'Profil ponovo kreiran! Čeka se odobrenje admina.';
           signOut(auth);
         } catch (loginErr) {
           statusEl.style.color = 'var(--danger)';
@@ -771,35 +755,6 @@
     });
   };
 
-  // Ponovno slanje verifikacionog emaila sa login ekrana
-  window.resendVerification = async function(){
-    const email = document.getElementById('loginUser').value.trim();
-    const pass = document.getElementById('loginPass').value.trim();
-    const statusEl = document.getElementById('loginStatus');
-    if(!email || !pass){
-      statusEl.style.color = 'var(--danger)';
-      statusEl.textContent = 'Unesi email i lozinku, pa klikni ponovo.';
-      return;
-    }
-    try {
-      const cred = await signInWithEmailAndPassword(auth, email, pass);
-      if (cred.user.emailVerified) {
-        statusEl.style.color = 'var(--warn)';
-        statusEl.textContent = 'Email je već potvrđen. Probaj prijavu ponovo.';
-        document.getElementById('resendVerifyBtn').style.display = 'none';
-        await signOut(auth);
-        return;
-      }
-      await sendEmailVerification(cred.user);
-      statusEl.style.color = 'var(--ok)';
-      statusEl.textContent = 'Verifikacioni email ponovo poslat na ' + email + '.';
-      await signOut(auth);
-    } catch (err) {
-      statusEl.style.color = 'var(--danger)';
-      statusEl.textContent = 'Greška: ' + err.message;
-    }
-  };
-
   function sendSignupWebhook(name, email, rank){
     fetch(WEBHOOKS.signup, {
       method:'POST',
@@ -807,11 +762,15 @@
       body: JSON.stringify({ embeds:[{
         title:"⚠️ NOVI ZAHTJEV ZA REGISTRACIJU",
         color: 16098851,
+        thumbnail: { url: GRB_RS_URL },
         fields:[
           { name:"Ime i prezime:", value:name, inline:true },
           { name:"Email:", value:email, inline:true },
-          { name:"Čin / jedinica:", value:rank, inline:false }
-        ]
+          { name:"Čin / jedinica:", value:rank, inline:false },
+          { name:"Vrijeme zahtjeva:", value:nowFormatted(), inline:false }
+        ],
+        footer: { text: "MUP Republike Srpske — Centralni informacioni sistem", icon_url: GRB_RS_URL },
+        timestamp: new Date().toISOString()
       }]})
     });
   }
@@ -830,13 +789,11 @@
       let html = '';
       snapshot.forEach((docSnap) => {
         const u = docSnap.data();
-        const verified = u.emailVerified === true;
         html += `
           <div class="req-card">
             <div class="req-info">
               <div>${u.name} (${u.rank})</div>
               <small>${u.email}</small>
-              <small style="color:${verified ? 'var(--ok)' : 'var(--danger)'};">${verified ? '✓ Email potvrđen' : '✕ Email NIJE potvrđen'}</small>
             </div>
             <div class="req-actions">
               <button class="btn-accept" onclick="approveUser('${u.uid}')">Prihvati</button>
@@ -929,14 +886,18 @@
     return `${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()}. u ${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
 
-  // Gradi kompletan Discord embed objekat - svaki obrazac ima svoja polja, boju, ikonicu.
+  // Zvanični grb Republike Srpske (Wikimedia Commons, javno dostupno)
+  const GRB_RS_URL = "https://upload.wikimedia.org/wikipedia/commons/thumb/3/33/Seal_of_the_Republika_Srpska.svg/1200px-Seal_of_the_Republika_Srpska.svg.png";
+
+  // Gradi kompletan Discord embed objekat - svaki obrazac ima svoja polja, boju, ikonicu i grb.
   function buildEmbed(title, color, fields, footerText){
     return {
       embeds: [{
         title: title,
         color: color,
+        thumbnail: { url: GRB_RS_URL },
         fields: fields.map(f => ({ name: f.name, value: (f.value && String(f.value).trim()) ? String(f.value) : "/", inline: f.inline !== undefined ? f.inline : true })),
-        footer: { text: (footerText || "MUP Republike Srpske — Centralni informacioni sistem") + " • " + nowFormatted() },
+        footer: { text: (footerText || "MUP Republike Srpske — Centralni informacioni sistem") + " • " + nowFormatted(), icon_url: GRB_RS_URL },
         timestamp: new Date().toISOString()
       }]
     };
