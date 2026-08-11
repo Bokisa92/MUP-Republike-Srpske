@@ -590,7 +590,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
   import { getFirestore, doc, setDoc, getDoc, deleteDoc, updateDoc, collection, onSnapshot, query, where, addDoc, getDocs, orderBy, serverTimestamp, increment } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -844,33 +844,12 @@
         <label>Čin / jedinica</label>
         <div style="padding:9px 11px;background:var(--bg);border:1px solid var(--line);border-radius:var(--radius);color:var(--white);">${currentUserData.rank || '/'}</div>
       </div>
-      <div class="form-group" style="margin-bottom:18px;">
+      <div class="form-group" style="margin-bottom:0;">
         <label>Email</label>
         <div style="padding:9px 11px;background:var(--bg);border:1px solid var(--line);border-radius:var(--radius);color:var(--white);">${currentUserData.email || '/'}</div>
       </div>
-      <button type="button" class="submit-btn" onclick="sendPasswordReset()">Pošalji link za reset lozinke</button>
-      <div id="settingsStatus" style="margin-top:10px;font-size:11.5px;font-family:'JetBrains Mono',monospace;"></div>
     `;
   }
-
-  window.sendPasswordReset = async function(){
-    const statusEl = document.getElementById('settingsStatus');
-    if(!currentUserData || !currentUserData.email){
-      statusEl.style.color = 'var(--danger)';
-      statusEl.textContent = 'Nema dostupnog emaila.';
-      return;
-    }
-    statusEl.style.color = 'var(--muted)';
-    statusEl.textContent = 'Slanje...';
-    try {
-      await sendPasswordResetEmail(auth, currentUserData.email);
-      statusEl.style.color = 'var(--ok)';
-      statusEl.textContent = 'Link za reset lozinke poslat na ' + currentUserData.email + ' (ako email zaista postoji).';
-    } catch(err){
-      statusEl.style.color = 'var(--danger)';
-      statusEl.textContent = 'Greška: ' + err.message;
-    }
-  };
 
   function listenForPendingRequests(){
     const q = query(collection(db, "users"), where("approved", "==", false));
@@ -913,16 +892,17 @@
       let count = 0;
       snapshot.forEach((docSnap) => {
         const u = docSnap.data();
-        if (u.role === 'admin') return; // admine ne prikazujemo za brisanje
         count++;
+        const isAdmin = u.role === 'admin';
         const safeName = (u.name || '').replace(/'/g, "\\'");
         html += `
           <div class="req-card">
             <div class="req-info">
-              <div>${u.name} (${u.rank || '/'})</div>
+              <div>${u.name} (${u.rank || '/'})${isAdmin ? ' <span style="color:var(--warn);font-size:10px;">— ADMIN</span>' : ''}</div>
               <small>${u.email}</small>
             </div>
             <div class="req-actions">
+              <button class="btn-accept" style="${isAdmin ? 'background:var(--warn);' : ''}" onclick="toggleAdminRole('${u.uid}', '${safeName}', ${isAdmin})">${isAdmin ? 'Ukloni admin' : 'Daj admin'}</button>
               <button class="btn-cancel" onclick="deleteUser('${u.uid}', '${safeName}')">Izbriši</button>
             </div>
           </div>
@@ -931,6 +911,20 @@
       listEl.innerHTML = count > 0 ? html : '<div style="font-size:12px;color:var(--muted);padding:10px 0;">Nema odobrenih korisnika.</div>';
     });
   }
+
+  // Daje ili uklanja admin ulogu korisniku, uz potvrdu.
+  window.toggleAdminRole = async function(uid, name, currentlyAdmin){
+    const isSelf = auth.currentUser && auth.currentUser.uid === uid;
+    let msg;
+    if (currentlyAdmin) {
+      msg = `Da li sigurno želiš da UKLONIŠ admin prava korisniku ${name}?`;
+      if (isSelf) msg += '\n\nPAŽNJA: Ovo je tvoj vlastiti nalog — izgubićeš pristup admin panelu!';
+    } else {
+      msg = `Da li sigurno želiš da daš ADMIN prava korisniku ${name}? Dobiće puni pristup admin panelu (odobravanje, brisanje, davanje admina drugima).`;
+    }
+    if(!confirm(msg)) return;
+    await updateDoc(doc(db, "users", uid), { role: currentlyAdmin ? "user" : "admin" });
+  };
 
   window.approveUser = async function(uid){ await updateDoc(doc(db, "users", uid), { approved: true }); };
   window.rejectUser = async function(uid){ await deleteDoc(doc(db, "users", uid)); };
